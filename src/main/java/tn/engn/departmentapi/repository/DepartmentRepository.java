@@ -12,4 +12,5 @@ import java.util.Optional;
 @Repository
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
     // Any custom query methods can be added here if needed
+    List<Department> findByNameContainingIgnoreCase(String name);
 }

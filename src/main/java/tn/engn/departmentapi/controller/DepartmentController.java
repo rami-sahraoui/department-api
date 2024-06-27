@@ -131,6 +131,22 @@ public class DepartmentController {
     }
 
     /**
+     * Retrieves departments by name.
+     *
+     * @param name Department name to search.
+     * @return ResponseEntity with the list of departments and HTTP status 200 (OK).
+     */
+    @GetMapping("/search")
+    @Operation(summary = "Search departments by name")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Departments retrieved successfully"),
+    })
+    public ResponseEntity<List<DepartmentResponseDto>> searchDepartmentsByName(@RequestParam String name) {
+        List<DepartmentResponseDto> departments = departmentService.searchDepartmentsByName(name);
+        return ResponseEntity.ok(departments);
+    }
+
+    /**
      * Retrieves sub-departments (children) of a department by parent ID.
      *
      * @param parentId Parent department ID to retrieve sub-departments.

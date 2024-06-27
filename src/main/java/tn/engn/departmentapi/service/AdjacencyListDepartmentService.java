@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Service implementation for managing departments using the adjacency list model.
@@ -266,6 +267,21 @@ public class AdjacencyListDepartmentService implements DepartmentService {
 
         // Convert the department to a response DTO and return
         return departmentMapper.toDto(department);
+    }
+
+    /**
+     * Searches departments by name.
+     *
+     * @param name department name to search
+     * @return list of departments matching the name
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<DepartmentResponseDto> searchDepartmentsByName(String name) {
+        List<Department> departments = departmentRepository.findByNameContainingIgnoreCase(name);
+        return departments.stream()
+                .map(departmentMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     /**

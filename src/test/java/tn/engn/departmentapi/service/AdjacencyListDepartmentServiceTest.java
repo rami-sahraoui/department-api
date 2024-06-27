@@ -18,7 +18,9 @@ import tn.engn.departmentapi.model.Department;
 import tn.engn.departmentapi.repository.DepartmentRepository;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -987,6 +989,60 @@ public class AdjacencyListDepartmentServiceTest {
         // Assert the exception message
         assertEquals("Mapping error", exception.getMessage());
     }
+
+    /**
+     * Tests the {@link DepartmentService#searchDepartmentsByName(String)} method.
+     * Verifies that departments are correctly searched by name.
+     */
+    @Test
+    public void testSearchDepartmentsByName() {
+        // Mock data
+        String name = "Engineering";
+        Department mockDepartment = Department.builder()
+                .id(1L)
+                .name(name)
+                .parentDepartment(null)
+                .build();
+        List<Department> mockDepartments = new ArrayList<>();
+        mockDepartments.add(mockDepartment);
+
+        // Mock repository method
+        when(departmentRepository.findByNameContainingIgnoreCase(name)).thenReturn(mockDepartments);
+
+        // Mock mapper behavior
+        List<DepartmentResponseDto> expectedDtoList = mockDepartments.stream()
+                .map(departmentMapper::toDto)
+                .collect(Collectors.toList());
+        when(departmentMapper.toDto(any(Department.class))).thenReturn(new DepartmentResponseDto());
+
+        // Call the method under test
+        List<DepartmentResponseDto> result = departmentService.searchDepartmentsByName(name);
+
+        // Assertions
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(mockDepartments.size());
+        // Add more assertions based on your expected behavior
+    }
+
+    /**
+     * Tests the {@link DepartmentService#searchDepartmentsByName(String)} method.
+     * Verifies handling of an empty result set.
+     */
+    @Test
+    public void testSearchDepartmentsByName_EmptyResult() {
+        // Mock data
+        String name = "NonExistingDepartment";
+
+        // Mock repository method
+        when(departmentRepository.findByNameContainingIgnoreCase(name)).thenReturn(new ArrayList<>());
+
+        // Call the method under test
+        List<DepartmentResponseDto> result = departmentService.searchDepartmentsByName(name);
+
+        // Assertions
+        assertThat(result).isEmpty();
+    }
+
 
     /**
      * Test case for the getParentDepartment method of AdjacencyListDepartmentService.

@@ -19,10 +19,7 @@ import tn.engn.departmentapi.exception.ValidationException;
 import tn.engn.departmentapi.model.Department;
 import tn.engn.departmentapi.repository.DepartmentRepository;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -294,6 +291,29 @@ public class AdjacencyListDepartmentServiceIT extends TestContainerSetup {
         requestDto.setName(""); // Empty name
 
         // Perform the update and assert that IllegalArgumentException is thrown
+        Department finalDepartment = department;
+        assertThrows(ValidationException.class, () -> departmentService.updateDepartment(finalDepartment.getId(), requestDto));
+    }
+
+    @Test
+    /**
+     * Integration test for updating a department with a name that exceeds maximum length.
+     * Expects ValidationException to be thrown.
+     */
+    public void testUpdateDepartment_ExceededMaxLengthName() {
+        // Create a department
+        Department department = new Department();
+        department.setName("Department");
+        department = departmentRepository.save(department);
+
+        // Prepare the update request with name that exceeds max length
+        String exceededName = "A".repeat(maxNameLength + 1);
+
+        DepartmentRequestDto requestDto = DepartmentRequestDto.builder()
+                .name(exceededName)
+                .build();
+
+        // Perform the update and assert that ValidationException is thrown
         Department finalDepartment = department;
         assertThrows(ValidationException.class, () -> departmentService.updateDepartment(finalDepartment.getId(), requestDto));
     }
@@ -654,6 +674,56 @@ public class AdjacencyListDepartmentServiceIT extends TestContainerSetup {
 
         // Verify the exception message
         assertEquals("Department not found with id: " + nonExistentId, exception.getMessage());
+    }
+
+    /**
+     * Integration test to verify behavior when searching departments by an existing name.
+     * Expectation: The method should return a list containing the departments with the specified name.
+     */
+    @Test
+    @Transactional
+    public void testSearchDepartmentsByName() {
+        // Given
+        String searchName = "Engineering";
+        createDepartment("Engineering"); // Create a department with the name "Engineering"
+
+        // When
+        List<DepartmentResponseDto> departments = departmentService.searchDepartmentsByName(searchName);
+
+        // Then
+        assertThat(departments).isNotNull();
+        assertThat(departments).hasSizeGreaterThanOrEqualTo(1); // Assuming only one department is created with the name "Engineering"
+        assertThat(departments.get(0).getName()).isEqualTo("Engineering");
+    }
+
+    /**
+     * Helper method to create a department with the specified name.
+     *
+     * @param name Name of the department to create.
+     */
+    private void createDepartment(String name) {
+        DepartmentRequestDto requestDto = DepartmentRequestDto.builder()
+                .name(name)
+                .build();
+        departmentService.createDepartment(requestDto);
+    }
+
+    /**
+     * Integration test to verify behavior when searching departments by a non-existing name.
+     * Expectation: The method should return an empty list.
+     */
+    @Test
+    @Transactional
+    public void testSearchDepartmentsByNameEmptyList() {
+        // Given
+        String nonExistingDepartmentName = "NonExistingDepartment-" + UUID.randomUUID().toString();
+
+        // When searching for a non-existing department
+        List<DepartmentResponseDto> departments = departmentService.searchDepartmentsByName(nonExistingDepartmentName);
+
+        // Then the result should be an empty list
+        assertThat(departments).isNotNull();
+        assertThat(departments).isEmpty();
     }
 
     /**

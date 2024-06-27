@@ -1,10 +1,12 @@
 package tn.engn.departmentapi.controller;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
@@ -20,6 +22,7 @@ import tn.engn.departmentapi.repository.DepartmentRepository;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,6 +41,14 @@ public class DepartmentControllerIT {
 
     @Autowired
     private DepartmentRepository departmentRepository;
+
+    /**
+     * Clean up the database after each test to ensure isolation.
+     */
+    @AfterEach
+    public void cleanUp() {
+        departmentRepository.deleteAll();
+    }
 
     /**
      * Tests the successful creation of a new department.
@@ -123,6 +134,10 @@ public class DepartmentControllerIT {
     @Transactional
     @Test
     void updateDepartment_Success() {
+
+        // Arrange: Create a departments with valid name and get his ID
+        Long departmentId = createDepartment("Engineering", null);
+
         // Arrange: Create a valid DepartmentRequestDto
         DepartmentRequestDto requestDto = new DepartmentRequestDto();
         requestDto.setName("Updated Engineering");
@@ -130,7 +145,7 @@ public class DepartmentControllerIT {
 
         // Act: Send a PUT request to update department with ID 1
         webTestClient.put()
-                .uri("/api/v1/departments/{id}", 1)
+                .uri("/api/v1/departments/{id}", departmentId)
                 .bodyValue(requestDto)
                 .exchange()
                 .expectStatus().isOk()
@@ -434,6 +449,62 @@ public class DepartmentControllerIT {
     }
 
     /**
+     * Integration test to verify behavior when searching departments by an existing name via the controller.
+     * Expectation: The method should return a list containing the departments with the specified name.
+     */
+    @Test
+    @Transactional
+    public void testSearchDepartmentsByName() {
+        // Given
+        String searchName = "Engineering";
+        createDepartment("Engineering"); // Create a department with the name "Engineering"
+
+        // When
+        List<DepartmentResponseDto> departments = webTestClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/api/v1/departments/search")
+                        .queryParam("name", searchName)
+                        .build())
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(DepartmentResponseDto.class)
+                .returnResult()
+                .getResponseBody();
+
+        // Then
+        assertThat(departments).isNotNull();
+        assertThat(departments).hasSize(1); // Assuming only one department is created with the name "Engineering"
+        assertThat(departments.get(0).getName()).isEqualTo("Engineering");
+    }
+
+    /**
+     * Integration test to verify behavior when searching departments by a non-existing name via the controller.
+     * Expectation: The method should return an empty list.
+     */
+    @Test
+    @Transactional
+    public void testSearchDepartmentsByNonExistingName() {
+        // Given
+        String randomName = "NonExistingDepartment_" + UUID.randomUUID(); // Generate a unique non-existing name
+
+        // When
+        List<DepartmentResponseDto> departments = webTestClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/api/v1/departments/search")
+                        .queryParam("name", randomName)
+                        .build())
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(DepartmentResponseDto.class)
+                .returnResult()
+                .getResponseBody();
+
+        // Then
+        assertThat(departments).isNotNull();
+        assertThat(departments).isEmpty();
+    }
+
+    /**
      * Tests retrieving sub-departments by parent ID.
      * Sends a GET request and expects HTTP status 200 (OK).
      * Verifies that the response contains the expected list of sub-departments.
@@ -688,5 +759,23 @@ public class DepartmentControllerIT {
                 .returnResult()
                 .getResponseBody()
                 .getId();
+    }
+
+    /**
+     * Helper method to create a department with the specified name.
+     *
+     * @param name Name of the department to create.
+     */
+    private void createDepartment(String name) {
+        DepartmentRequestDto requestDto = DepartmentRequestDto.builder()
+                .name(name)
+                .build();
+
+        webTestClient.post()
+                .uri("/api/v1/departments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(requestDto)
+                .exchange()
+                .expectStatus().isCreated();
     }
 }

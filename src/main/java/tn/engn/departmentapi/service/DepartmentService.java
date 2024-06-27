@@ -1,5 +1,6 @@
 package tn.engn.departmentapi.service;
 
+import org.springframework.transaction.annotation.Transactional;
 import tn.engn.departmentapi.dto.DepartmentRequestDto;
 import tn.engn.departmentapi.dto.DepartmentResponseDto;
 
@@ -53,6 +54,14 @@ public interface DepartmentService {
      * @return the department with the specified ID as a response DTO
      */
     DepartmentResponseDto getDepartmentById(Long id);
+
+    /**
+     * Searches departments by name.
+     *
+     * @param name department name to search
+     * @return list of departments matching the name
+     */
+    List<DepartmentResponseDto> searchDepartmentsByName(String name);
 
     /**
      * Retrieves the parent department of a given department.
