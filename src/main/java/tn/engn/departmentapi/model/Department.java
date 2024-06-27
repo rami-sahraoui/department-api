@@ -1,14 +1,15 @@
 package tn.engn.departmentapi.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Data
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "departments")
 public class Department {
@@ -24,7 +25,9 @@ public class Department {
     @JoinColumn(name = "parent_id")
     private Department parentDepartment;
 
-    @OneToMany(mappedBy = "parentDepartment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "parentDepartment", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    // Ensure subDepartments is initialized as a mutable list
+    @Builder.Default
     private List<Department> subDepartments = new ArrayList<>();
 
     // Utility methods to manage bidirectional relationships

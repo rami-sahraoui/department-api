@@ -1,29 +1,28 @@
 package tn.engn.departmentapi.service;
 
-import tn.engn.departmentapi.model.Department;
+import tn.engn.departmentapi.dto.DepartmentRequestDto;
+import tn.engn.departmentapi.dto.DepartmentResponseDto;
 
 import java.util.List;
 
 public interface DepartmentService {
 
     /**
-     * Creates a new department with the given name and optional parent ID.
+     * Creates a new department based on the provided DTO.
      *
-     * @param name     the name of the new department
-     * @param parentId the ID of the parent department (optional)
-     * @return the created department
+     * @param departmentRequestDto the DTO containing the new department's details
+     * @return the created department as a response DTO
      */
-    Department createDepartment(String name, Long parentId);
+    DepartmentResponseDto createDepartment(DepartmentRequestDto departmentRequestDto);
 
     /**
-     * Updates the name and parent of an existing department.
+     * Updates an existing department based on the provided DTO.
      *
-     * @param id       the ID of the department to update
-     * @param name     the new name of the department
-     * @param parentId the new parent ID of the department
-     * @return the updated department
+     * @param id                   the ID of the department to update
+     * @param departmentRequestDto the DTO containing the updated department's details
+     * @return the updated department as a response DTO
      */
-    Department updateDepartment(Long id, String name, Long parentId);
+    DepartmentResponseDto updateDepartment(Long id, DepartmentRequestDto departmentRequestDto);
 
     /**
      * Deletes a department by its ID.
@@ -35,47 +34,47 @@ public interface DepartmentService {
     /**
      * Retrieves all departments.
      *
-     * @return a list of all departments
+     * @return a list of all departments as response DTOs
      */
-    List<Department> getAllDepartments();
+    List<DepartmentResponseDto> getAllDepartments();
 
     /**
      * Retrieves sub-departments (children) of a given parent department.
      *
      * @param parentId the ID of the parent department
-     * @return a list of sub-departments
+     * @return a list of sub-departments as response DTOs
      */
-    List<Department> getSubDepartments(Long parentId);
+    List<DepartmentResponseDto> getSubDepartments(Long parentId);
 
     /**
      * Retrieves a department by its ID.
      *
      * @param id the ID of the department to retrieve
-     * @return the department with the specified ID
+     * @return the department with the specified ID as a response DTO
      */
-    Department getDepartmentById(Long id);
+    DepartmentResponseDto getDepartmentById(Long id);
 
     /**
      * Retrieves the parent department of a given department.
      *
      * @param departmentId the ID of the department
-     * @return the parent department of the specified department
+     * @return the parent department as a response DTO
      */
-    Department getParentDepartment(Long departmentId);
+    DepartmentResponseDto getParentDepartment(Long departmentId);
 
     /**
      * Retrieves all descendants (children, grandchildren, etc.) of a given department.
      *
      * @param departmentId the ID of the department
-     * @return a list of all descendants of the specified department
+     * @return a list of all descendants as response DTOs
      */
-    List<Department> getDescendants(Long departmentId);
+    List<DepartmentResponseDto> getDescendants(Long departmentId);
 
     /**
      * Retrieves all ancestors (parent, grandparent, etc.) of a given department.
      *
      * @param departmentId the ID of the department
-     * @return a list of all ancestors of the specified department
+     * @return a list of all ancestors as response DTOs
      */
-    List<Department> getAncestors(Long departmentId);
+    List<DepartmentResponseDto> getAncestors(Long departmentId);
 }

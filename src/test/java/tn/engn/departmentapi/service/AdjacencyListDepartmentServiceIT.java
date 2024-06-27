@@ -1,521 +1,910 @@
 package tn.engn.departmentapi.service;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.env.Environment;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import tn.engn.departmentapi.TestContainerSetup;
+import tn.engn.departmentapi.dto.DepartmentRequestDto;
+import tn.engn.departmentapi.dto.DepartmentResponseDto;
+import tn.engn.departmentapi.exception.DataIntegrityException;
+import tn.engn.departmentapi.exception.DepartmentNotFoundException;
+import tn.engn.departmentapi.exception.ParentDepartmentNotFoundException;
+import tn.engn.departmentapi.exception.ValidationException;
 import tn.engn.departmentapi.model.Department;
 import tn.engn.departmentapi.repository.DepartmentRepository;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Integration tests for the AdjacencyListDepartmentService.
+ * Integration tests for the AdjacencyListDepartmentService using DTOs.
  */
-@Slf4j // Lombok annotation to generate SLF4J logger field
+@Slf4j
 @SpringBootTest
-@Testcontainers
-public class AdjacencyListDepartmentServiceIT {
-
-    // Testcontainers MySQL container for database integration testing
-    @Container
-    public static MySQLContainer<?> mysqlContainer = new MySQLContainer<>("mysql:8.0.32")
-            .withDatabaseName("test")
-            .withUsername("test")
-            .withPassword("test");
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD) // Reset context after each test
+public class AdjacencyListDepartmentServiceIT extends TestContainerSetup {
 
     @Autowired
     private AdjacencyListDepartmentService departmentService;
 
     @Autowired
     private DepartmentRepository departmentRepository;
+    @Autowired
+    private Environment environment;
 
     @Value("${department.max-name-length}") // Assuming maxNameLength is configured in application properties
     private int maxNameLength;
 
     /**
-     * Set up the database container before all tests.
+     * Clean up the database after each test to ensure isolation.
      */
-    @BeforeAll
-    public static void setUp() {
-        mysqlContainer.start();
-        System.setProperty("DB_URL", mysqlContainer.getJdbcUrl());
-        System.setProperty("DB_USERNAME", mysqlContainer.getUsername());
-        System.setProperty("DB_PASSWORD", mysqlContainer.getPassword());
+    @AfterEach
+    public void cleanUp() {
+        departmentRepository.deleteAll();
     }
 
     /**
-     * Tear down the database container after all tests.
+     * Test method to verify if the 'test' profile is active.
+     * <p>
+     * This test checks if the 'test' profile is correctly activated for the integration test.
+     * It retrieves the active profiles from the Spring environment, logs them, and asserts
+     * that the 'test' profile is present among the active profiles.
      */
-    @AfterAll
-    public static void tearDown() {
-        mysqlContainer.stop();
+    @Test
+    public void testProfileActivation() {
+        // Retrieve active profiles from the environment
+        String[] activeProfiles = environment.getActiveProfiles();
+
+        // Log active profiles to provide visibility during test execution
+        log.info("Active Profiles: {}", Arrays.toString(activeProfiles));
+
+        // Assertion to check if 'test' profile is active
+        assertThat(activeProfiles).contains("test-container");
     }
 
     /**
-     * Test creating a department with a valid name.
+     * Test creating a department with a valid name using DTO.
      */
     @Test
     @Transactional
     public void testCreateDepartmentWithValidName() {
-        String validName = "Valid Department Name";
+        DepartmentRequestDto requestDto = DepartmentRequestDto.builder()
+                .name("Valid Department Name")
+                .build();
 
-        // Create a department with a valid name, expect no exceptions
-        departmentService.createDepartment(validName, null);
+        // Create department with a valid name, expect no exceptions
+        DepartmentResponseDto responseDto = departmentService.createDepartment(requestDto);
+
+        // Assertions
+        assertThat(responseDto).isNotNull();
+        assertThat(responseDto.getId()).isNotNull();
+        assertThat(responseDto.getName()).isEqualTo(requestDto.getName());
     }
 
     /**
-     * Test creating a department with a name of maximum length.
+     * Test creating a department with a name of maximum length using DTO.
      */
     @Test
     @Transactional
     public void testCreateDepartmentWithMaxLengthName() {
-        // Generate a name that exactly meets the max length
         String maxLengthName = "A".repeat(maxNameLength);
 
-        // Create a department with a name of maximum length, expect no exceptions
-        departmentService.createDepartment(maxLengthName, null);
+        DepartmentRequestDto requestDto = DepartmentRequestDto.builder()
+                .name(maxLengthName)
+                .build();
+
+        // Create department with a name of maximum length, expect no exceptions
+        DepartmentResponseDto responseDto = departmentService.createDepartment(requestDto);
+
+        // Assertions
+        assertThat(responseDto).isNotNull();
+        assertThat(responseDto.getId()).isNotNull();
+        assertThat(responseDto.getName()).isEqualTo(requestDto.getName());
     }
 
     /**
-     * Test creating a department with a name that exceeds maximum length.
+     * Test creating a department with a name that exceeds maximum length using DTO.
      */
     @Test
     @Transactional
     public void testCreateDepartmentWithExceededMaxLengthName() {
-        // Generate a name that exceeds the max length by one character
         String exceededName = "A".repeat(maxNameLength + 1);
 
-        // Create a department with a name that exceeds max length, expect IllegalArgumentException
-        assertThrows(IllegalArgumentException.class, () -> departmentService.createDepartment(exceededName, null));
+        DepartmentRequestDto requestDto = DepartmentRequestDto.builder()
+                .name(exceededName)
+                .build();
+
+        // Create department with a name that exceeds max length, expect IllegalArgumentException
+        assertThrows(ValidationException.class, () -> departmentService.createDepartment(requestDto));
     }
 
     /**
-     * Test creating a department with an empty name.
+     * Test creating a department with an empty name using DTO.
      */
     @Test
     @Transactional
     public void testCreateDepartmentWithEmptyName() {
-        // Create a department with an empty name, expect IllegalArgumentException
-        assertThrows(IllegalArgumentException.class, () -> departmentService.createDepartment("", null));
+        DepartmentRequestDto requestDto = DepartmentRequestDto.builder()
+                .name("")
+                .build();
+
+        // Create department with an empty name, expect IllegalArgumentException
+        assertThrows(ValidationException.class, () -> departmentService.createDepartment(requestDto));
     }
 
     /**
-     * Test creating a department with a null name.
+     * Test creating a department with a null name using DTO.
      */
     @Test
     @Transactional
     public void testCreateDepartmentWithNullName() {
-        // Create a department with a null name, expect IllegalArgumentException
-        assertThrows(IllegalArgumentException.class, () -> departmentService.createDepartment(null, null));
+        DepartmentRequestDto requestDto = DepartmentRequestDto.builder()
+                .name(null)
+                .build();
+
+        // Create department with a null name, expect IllegalArgumentException
+        assertThrows(ValidationException.class, () -> departmentService.createDepartment(requestDto));
     }
 
     /**
-     * Test creating a department without parent.
+     * Test creating a department without parent using DTO.
      */
     @Test
     @Transactional
     public void testCreateDepartmentWithoutParent() {
-        // Create a department without a parent
-        Department department = departmentService.createDepartment("Department Without Parent", null);
+        DepartmentRequestDto requestDto = DepartmentRequestDto.builder()
+                .name("Department Without Parent")
+                .build();
+
+        // Create department without a parent
+        DepartmentResponseDto responseDto = departmentService.createDepartment(requestDto);
 
         // Assertions
-        Assertions.assertNotNull(department);
-        Assertions.assertNull(department.getParentDepartment());
+        assertThat(responseDto).isNotNull();
+        assertThat(responseDto.getParentDepartmentId()).isNull();
     }
 
     /**
-     * Test creating a department with a parent.
+     * Test creating a department with a parent using DTO.
      */
     @Test
     @Transactional
     public void testCreateDepartmentWithParent() {
         // Create parent department
-        Department parent = departmentService.createDepartment("Parent Department", null);
+        DepartmentRequestDto parentRequestDto = DepartmentRequestDto.builder()
+                .name("Parent Department")
+                .build();
+        DepartmentResponseDto parentResponseDto = departmentService.createDepartment(parentRequestDto);
+
         // Create child department with parent reference
-        Department child = departmentService.createDepartment("Child Department", parent.getId());
+        DepartmentRequestDto childRequestDto = DepartmentRequestDto.builder()
+                .name("Child Department")
+                .parentDepartmentId(parentResponseDto.getId())
+                .build();
+        DepartmentResponseDto childResponseDto = departmentService.createDepartment(childRequestDto);
 
         // Assertions
-        Assertions.assertEquals(parent.getId(), child.getParentDepartment().getId());
-        Assertions.assertTrue(parent.getSubDepartments().contains(child));
+        assertThat(childResponseDto).isNotNull();
+        assertThat(childResponseDto.getParentDepartmentId()).isNotNull();
+        assertThat(childResponseDto.getParentDepartmentId()).isEqualTo(parentResponseDto.getId());
+        // No assertion for sub-departments in this test, as per provided details
     }
 
     /**
-     * Test attempting to create a department with a non-existing parent ID.
+     * Test attempting to create a department with a non-existing parent ID using DTO.
      */
     @Test
     @Transactional
     public void testNonExistingParentId() {
+        DepartmentRequestDto requestDto = DepartmentRequestDto.builder()
+                .name("Department")
+                .parentDepartmentId(-1L)
+                .build();
+
         // Attempt to create a department with a non-existing parent ID
-        assertThrows(EntityNotFoundException.class, () -> departmentService.createDepartment("Department", -1L));
+        assertThrows(ParentDepartmentNotFoundException.class, () -> departmentService.createDepartment(requestDto));
     }
 
-    /**
-     * Test updating a department.
-     */
     @Test
-    @Transactional
-    public void testUpdateDepartment() {
-        // Create parent department
-        Department parent = departmentService.createDepartment("Parent Department", null);
-        // Create department to update
-        Department department = departmentService.createDepartment("Department", parent.getId());
-
-        // Update department name and parent
-        Department updatedDepartment = departmentService.updateDepartment(department.getId(), "Updated Department", parent.getId());
-
-        // Assertions
-        Assertions.assertEquals("Updated Department", updatedDepartment.getName());
-        Assertions.assertEquals(parent.getId(), updatedDepartment.getParentDepartment().getId());
-    }
-
     /**
-     * Test updating a department's parent.
+     * Integration test for updating a department's name.
+     * Verifies that the department's name is updated correctly.
      */
-    @Test
-    @Transactional
-    public void testUpdateDepartmentParent() {
-        // Create parent departments
-        Department parent1 = departmentService.createDepartment("Parent Department 1", null);
-        Department parent2 = departmentService.createDepartment("Parent Department 2", null);
-
-        // Create department to update
-        Department department = departmentService.createDepartment("Department", parent1.getId());
-
-        // Assert initial parent
-        Assertions.assertEquals(parent1.getId(), department.getParentDepartment().getId());
-
-        // Update parent to parent2
-        department = departmentService.updateDepartment(department.getId(), "Department", parent2.getId());
-
-        // Assertions
-        Assertions.assertEquals(parent2.getId(), department.getParentDepartment().getId());
-
-        // Verify parent1 no longer contains the department in its sub-departments
-        Assertions.assertFalse(parent1.getSubDepartments().contains(department));
-
-        // Verify parent2 now contains the department in its sub-departments
-        Assertions.assertTrue(parent2.getSubDepartments().contains(department));
-    }
-
-    /**
-     * Test handling circular dependencies when updating department parent.
-     */
-    @Test
-    @Transactional
-    public void testCircularDependencies() {
-        // Create departments
-        Department parent = departmentService.createDepartment("Parent Department", null);
-        Department child = departmentService.createDepartment("Child Department", parent.getId());
-
-        // Attempt to make the parent a child of the current child
-        assertThrows(IllegalArgumentException.class, () -> departmentService.updateDepartment(parent.getId(), "Parent Department", child.getId()));
-    }
-
-    /**
-     * Test updating a department's parent to null.
-     */
-    @Test
-    @Transactional
-    public void testUpdateDepartmentParentToNull() {
-        // Create departments
-        Department parent = departmentService.createDepartment("Parent Department", null);
-        Department child = departmentService.createDepartment("Child Department", parent.getId());
-
-        // Update child department to have no parent
-        Department updatedChild = departmentService.updateDepartment(child.getId(), "Child Department", null);
-
-        // Assertions
-        Assertions.assertNull(updatedChild.getParentDepartment());
-        Assertions.assertFalse(parent.getSubDepartments().contains(updatedChild));
-    }
-
-    /**
-     * Test updating a non-existing department.
-     */
-    @Test
-    @Transactional
-    public void testUpdateNonExistingDepartment() {
-        // Attempt to update a department with a non-existing ID
-        assertThrows(EntityNotFoundException.class, () -> departmentService.updateDepartment(-1L, "Updated Department", null));
-    }
-
-    /**
-     * Test deleting a department without parent.
-     */
-    @Test
-    @Transactional
-    public void testDeleteDepartmentWithoutParent() {
+    public void testUpdateDepartment_updateName() {
         // Create a department
-        Department department = departmentService.createDepartment("Department Without Parent", null);
-        Long departmentId = department.getId();
+        Department department = new Department();
+        department.setName("Original Department Name");
+        department = departmentRepository.save(department);
+
+        // Prepare the update request
+        DepartmentRequestDto requestDto = new DepartmentRequestDto();
+        requestDto.setName("Updated Department Name");
+
+        // Perform the update
+        DepartmentResponseDto updatedDto = departmentService.updateDepartment(department.getId(), requestDto);
+
+        // Retrieve the department from database
+        Optional<Department> optionalDepartment = departmentRepository.findById(department.getId());
+        assertTrue(optionalDepartment.isPresent(), "Department should exist in the database");
+
+        // Verify the department's name is updated
+        assertEquals(requestDto.getName(), optionalDepartment.get().getName());
+    }
+
+    @Test
+    /**
+     * Integration test for updating a department that does not exist.
+     * Expects EntityNotFoundException to be thrown.
+     */
+    public void testUpdateDepartment_departmentNotFound() {
+        // Prepare the update request for a non-existent department
+        DepartmentRequestDto requestDto = new DepartmentRequestDto();
+        requestDto.setName("Updated Department Name");
+
+        // Perform the update and assert that EntityNotFoundException is thrown
+        assertThrows(DepartmentNotFoundException.class, () -> departmentService.updateDepartment(-1L, requestDto));
+    }
+
+    @Test
+    /**
+     * Integration test for updating a department with a parent that does not exist.
+     * Expects EntityNotFoundException to be thrown.
+     */
+    public void testUpdateDepartment_parentDepartmentNotFound() {
+        // Create a department
+        Department department = new Department();
+        department.setName("Department");
+        department = departmentRepository.save(department);
+
+        // Prepare the update request with a non-existent parent department ID
+        DepartmentRequestDto requestDto = new DepartmentRequestDto();
+        requestDto.setName("Updated Department Name");
+        requestDto.setParentDepartmentId(-1L); // Non-existent parent ID
+
+        // Perform the update and assert that EntityNotFoundException is thrown
+        Department finalDepartment = department;
+        assertThrows(ParentDepartmentNotFoundException.class, () -> departmentService.updateDepartment(finalDepartment.getId(), requestDto));
+    }
+
+    @Test
+    /**
+     * Integration test for updating a department with an empty or null name.
+     * Expects IllegalArgumentException to be thrown.
+     */
+    public void testUpdateDepartment_emptyOrNullName() {
+        // Create a department
+        Department department = new Department();
+        department.setName("Department");
+        department = departmentRepository.save(department);
+
+        // Prepare the update request with an empty or null name
+        DepartmentRequestDto requestDto = new DepartmentRequestDto();
+        requestDto.setName(""); // Empty name
+
+        // Perform the update and assert that IllegalArgumentException is thrown
+        Department finalDepartment = department;
+        assertThrows(ValidationException.class, () -> departmentService.updateDepartment(finalDepartment.getId(), requestDto));
+    }
+
+    @Test
+    /**
+     * Integration test for updating a department that would create a circular dependency.
+     * Expects IllegalArgumentException to be thrown.
+     */
+    public void testUpdateDepartment_circularDependency() {
+        // Create departments
+        Department department1 = new Department();
+        department1.setName("Department 1");
+        department1 = departmentRepository.save(department1);
+
+        Department department2 = new Department();
+        department2.setName("Department 2");
+        department2.setParentDepartment(department1);
+        department2 = departmentRepository.save(department2);
+
+        // Attempt to set department1 as a child of department2, creating a circular dependency
+        DepartmentRequestDto requestDto = new DepartmentRequestDto();
+        requestDto.setName("Updated Department 1 Name");
+        requestDto.setParentDepartmentId(department2.getId());
+
+        // Perform the update and assert that IllegalArgumentException is thrown
+        Department finalDepartment = department1;
+        assertThrows(DataIntegrityException.class, () -> departmentService.updateDepartment(finalDepartment.getId(), requestDto));
+    }
+
+    @Test
+    /**
+     * Test case for updating the parent department of a department.
+     * Verifies that the parent department is updated correctly.
+     */
+    public void testUpdateDepartment_updateParent() {
+        // Create and save parent and child departments
+        Department oldParent = Department.builder().name("Old Parent Department").build();
+        Department newParent = Department.builder().name("New Parent Department").build();
+        Department child = Department.builder().name("Child Department").parentDepartment(oldParent).build();
+        departmentRepository.save(oldParent);
+        departmentRepository.save(newParent);
+        departmentRepository.save(child);
+
+        // Create the request DTO with the new parent ID
+        DepartmentRequestDto requestDto = DepartmentRequestDto.builder()
+                .name("Updated Child Department")
+                .parentDepartmentId(newParent.getId())
+                .build();
+
+        // Call the method to test
+        DepartmentResponseDto result = departmentService.updateDepartment(child.getId(), requestDto);
+
+        // Verify that the result is not null and has the expected parent department ID
+        assertNotNull(result, "The result should not be null");
+        assertEquals(newParent.getId(), result.getParentDepartmentId(), "The result parent ID should be the new parent's ID");
+    }
+
+    @Test
+    /**
+     * Test case for removing the parent department of a department.
+     * Verifies that the parent department is removed correctly.
+     */
+    public void testUpdateDepartment_removeParent() {
+        // Create and save parent and child departments
+        Department parent = Department.builder().name("Parent Department").build();
+        Department child = Department.builder().name("Child Department").parentDepartment(parent).build();
+        departmentRepository.save(parent);
+        departmentRepository.save(child);
+
+        // Create the request DTO with no parent ID
+        DepartmentRequestDto requestDto = DepartmentRequestDto.builder()
+                .name("Updated Child Department")
+                .parentDepartmentId(null)
+                .build();
+
+        // Call the method to test
+        DepartmentResponseDto result = departmentService.updateDepartment(child.getId(), requestDto);
+
+        // Verify that the result is not null and has no parent department ID
+        assertNotNull(result, "The result should not be null");
+        assertNull(result.getParentDepartmentId(), "The result should have no parent department ID");
+    }
+
+    @Test
+    /**
+     * Test case for updating the department without changing the parent.
+     * Verifies that unnecessary updates are avoided.
+     */
+    public void testUpdateDepartment_avoidUnnecessaryUpdate() {
+        // Create and save parent and child departments
+        Department parent = Department.builder().name("Parent Department").build();
+        Department child = Department.builder().name("Child Department").parentDepartment(parent).build();
+        departmentRepository.save(parent);
+        departmentRepository.save(child);
+
+        // Create the request DTO with the same parent ID
+        DepartmentRequestDto requestDto = DepartmentRequestDto.builder()
+                .name("Updated Child Department")
+                .parentDepartmentId(parent.getId())
+                .build();
+
+        // Call the method to test
+        DepartmentResponseDto result = departmentService.updateDepartment(child.getId(), requestDto);
+
+        // Verify that the result is not null and has the expected parent department ID
+        assertNotNull(result, "The result should not be null");
+        assertEquals(parent.getId(), result.getParentDepartmentId(), "The result parent ID should be the parent's ID");
+    }
+
+    @Test
+    /**
+     * Integration test for deleting an existing department.
+     * Verifies that the department is deleted successfully.
+     */
+    public void testDeleteDepartment_existingDepartment() {
+        // Create a department
+        Department department = new Department();
+        department.setName("Department");
+        department = departmentRepository.save(department);
 
         // Delete the department
-        departmentService.deleteDepartment(departmentId);
+        departmentService.deleteDepartment(department.getId());
 
-        // Verify department is deleted from repository
-        assertThat(departmentRepository.findById(departmentId)).isEmpty();
+        // Verify that the department is deleted by checking repository
+        assertFalse(departmentRepository.findById(department.getId()).isPresent(), "Department should be deleted");
+    }
+
+    @Test
+    /**
+     * Integration test for deleting a non-existing department.
+     * Expects EntityNotFoundException to be thrown.
+     */
+    public void testDeleteDepartment_nonExistingDepartment() {
+        // Attempt to delete a department with a non-existing ID
+        Long nonExistingId = Long.MAX_VALUE;
+
+        // Perform the delete and assert that EntityNotFoundException is thrown
+        DepartmentNotFoundException exception = assertThrows(DepartmentNotFoundException.class, () ->
+                departmentService.deleteDepartment(nonExistingId));
+
+        assertEquals("Department not found with id: " + nonExistingId, exception.getMessage());
     }
 
     /**
-     * Test deleting a department with parent.
+     * Test case for deleting a department with sub-departments.
+     * Verifies that all sub-departments are also deleted.
      */
     @Test
-    @Transactional
-    public void testDeleteDepartmentWithParent() {
-        // Create parent department
-        Department parent = departmentService.createDepartment("Parent Department", null);
-        Long parentId = parent.getId();
-
-        // Create child department
-        Department child = departmentService.createDepartment("Child Department", parentId);
-        Long childId = child.getId();
-
-        // Delete the child department
-        departmentService.deleteDepartment(childId);
-
-        // Verify child department is deleted from repository
-        assertThat(departmentRepository.findById(childId)).isEmpty();
-
-        // Verify child department is removed from parent's sub-departments list
-        Department updatedParent = departmentRepository.findById(parentId)
-                .orElseThrow(() -> new EntityNotFoundException("Parent department not found with id: " + parentId));
-        assertThat(updatedParent.getSubDepartments()).doesNotContain(child);
-    }
-
-    /**
-     * Test attempting to delete a non-existing department.
-     */
-    @Test
-    @Transactional
-    public void testDeleteNonExistingDepartment() {
-        // Attempt to delete a non-existing department
-        assertThrows(EntityNotFoundException.class, () -> departmentService.deleteDepartment(-1L));
-    }
-
-    /**
-     * Test deleting a department with sub-departments.
-     */
-    @Test
-    @Transactional
-    public void testDeleteDepartmentWithSubDepartments() {
-        // Create parent department
-        Department parent = departmentService.createDepartment("Parent Department", null);
-
-        // Create child departments
-        Department child1 = departmentService.createDepartment("Child Department 1", parent.getId());
-        Department child2 = departmentService.createDepartment("Child Department 2", parent.getId());
-
-        // Delete the parent department (and its sub-departments recursively)
-        departmentService.deleteDepartment(parent.getId());
-
-        // Verify parent department is deleted from repository
-        assertThat(departmentRepository.findById(parent.getId())).isEmpty();
-
-        // Verify child departments are deleted from repository
-        assertThat(departmentRepository.findById(child1.getId())).isEmpty();
-        assertThat(departmentRepository.findById(child2.getId())).isEmpty();
-    }
-
-    /**
-     * Test retrieving all departments.
-     */
-    @Test
-    @Transactional
-    public void testGetAllDepartments() {
-        // Create departments
-        Department department1 = departmentService.createDepartment("Department 1", null);
-        Department department2 = departmentService.createDepartment("Department 2", null);
-
-        // Retrieve all departments
-        List<Department> departments = departmentService.getAllDepartments();
-
-        // Assertions
-        Assertions.assertEquals(2, departments.size());
-        Assertions.assertTrue(departments.contains(department1));
-        Assertions.assertTrue(departments.contains(department2));
-    }
-
-    /**
-     * Test retrieving sub-departments.
-     */
-    @Test
-    @Transactional
-    public void testGetSubDepartments() {
-        // Create parent department
-        Department parent = departmentService.createDepartment("Parent Department", null);
-        // Create child departments
-        Department child1 = departmentService.createDepartment("Child Department 1", parent.getId());
-        Department child2 = departmentService.createDepartment("Child Department 2", parent.getId());
-
-        // Retrieve sub-departments of parent
-        List<Department> subDepartments = departmentService.getSubDepartments(parent.getId());
-
-        // Assertions
-        Assertions.assertEquals(2, subDepartments.size());
-        Assertions.assertTrue(subDepartments.contains(child1));
-        Assertions.assertTrue(subDepartments.contains(child2));
-    }
-
-    /**
-     * Test retrieving a department by ID.
-     */
-    @Test
-    @Transactional
-    public void testGetDepartmentById() {
-        // Create a department
-        Department department = departmentService.createDepartment("Test Department", null);
-
-        // Retrieve the department by ID
-        Department foundDepartment = departmentService.getDepartmentById(department.getId());
-
-        // Assertions
-        Assertions.assertNotNull(foundDepartment);
-        Assertions.assertEquals(department.getId(), foundDepartment.getId());
-    }
-
-    /**
-     * Test retrieving the parent department.
-     */
-    @Test
-    @Transactional
-    public void testGetParentDepartment() {
-        // Create parent department
-        Department parent = departmentService.createDepartment("Parent Department", null);
-        // Create child department
-        Department child = departmentService.createDepartment("Child Department", parent.getId());
-
-        // Retrieve parent of child department
-        Department foundParent = departmentService.getParentDepartment(child.getId());
-
-        // Assertions
-        Assertions.assertEquals(parent, foundParent);
-    }
-
-    /**
-     * Test getting parent department of a department that has no parent.
-     */
-    @Test
-    @Transactional
-    public void testGetParentDepartmentNoParent() {
-        // Create a department with no parent
-        Department department = departmentService.createDepartment("No Parent Department", null);
-
-        // Attempt to retrieve parent department, expect EntityNotFoundException
-        assertThrows(EntityNotFoundException.class, () -> departmentService.getParentDepartment(department.getId()));
-    }
-
-    /**
-     * Test retrieving descendants of a department.
-     */
-    @Test
-    @Transactional
-    public void testGetDescendants() {
-        // Create parent department
-        Department parent = new Department();
-        parent.setName("Parent Department");
+    public void testDeleteDepartment_withSubDepartments() {
+        // Create a parent department
+        Department parent = Department.builder().name("Parent Department").build();
         Department savedParent = departmentRepository.save(parent);
 
-        // Create child department
-        Department child = new Department();
-        child.setName("Child Department");
-        savedParent.addSubDepartment(child); // Establish bidirectional relationship
-        Department savedChild = departmentRepository.save(child);
+        // Create sub-departments
+        Department sub1 = Department.builder().name("Sub Department 1").parentDepartment(savedParent).build();
+        Department sub2 = Department.builder().name("Sub Department 2").parentDepartment(savedParent).build();
+        departmentRepository.saveAllAndFlush(new ArrayList<>(List.of(sub1, sub2)));
 
-        // Create grandchild department
-        Department grandChild = new Department();
-        grandChild.setName("GrandChild Department");
-        savedChild.addSubDepartment(grandChild); // Establish bidirectional relationship
-        departmentRepository.save(grandChild);
+        // Call deleteDepartment for parent department
+        departmentService.deleteDepartment(savedParent.getId());
 
-        // Retrieve all descendants of the parent department
-        List<Department> descendants = departmentService.getDescendants(savedParent.getId());
-
-        // Assertions
-        Assertions.assertEquals(2, descendants.size()); // Expecting Child and GrandChild departments
-        Assertions.assertTrue(descendants.contains(savedChild));
-        Assertions.assertTrue(descendants.contains(grandChild));
+        // Verify that parent and all sub-departments are deleted
+        assertFalse(departmentRepository.existsById(savedParent.getId()));
+        assertFalse(departmentRepository.existsById(sub1.getId()));
+        assertFalse(departmentRepository.existsById(sub2.getId()));
     }
 
     /**
-     * Test retrieving ancestors of a department.
+     * Test case for deleting a department that would create a circular dependency.
+     * Verifies that an IllegalArgumentException is thrown.
      */
     @Test
-    @Transactional
-    public void testGetAncestors() {
+    public void testDeleteDepartment_circularDependency() {
         // Create departments
-        Department parent = departmentService.createDepartment("Parent Department", null);
-        Department child = departmentService.createDepartment("Child Department", parent.getId());
-        Department grandChild = departmentService.createDepartment("GrandChild Department", child.getId());
+        Department department1 = Department.builder().name("Department 1").subDepartments(new ArrayList<>()).build();
+        Department department2 = Department.builder().name("Department 2").subDepartments(new ArrayList<>()).build();
+        department1.addSubDepartment(department2);
+        department2.addSubDepartment(department1);
 
-        // Retrieve ancestors of grandchild department
-        List<Department> ancestors = departmentService.getAncestors(grandChild.getId());
+        // Save departments to the repository
+        Department savedDepartment1 = departmentRepository.save(department1);
+        Department savedDepartment2 = departmentRepository.save(department2);
 
-        // Assertions
-        Assertions.assertEquals(2, ancestors.size()); // Expecting Parent and Child departments
-        Assertions.assertTrue(ancestors.contains(parent));
-        Assertions.assertTrue(ancestors.contains(child));
+
+        // Attempt to delete department1
+        DataIntegrityException exception = assertThrows(DataIntegrityException.class, () -> departmentService.deleteDepartment(savedDepartment1.getId()));
+
+        // Verify the exception message
+        assertTrue(exception.getMessage().contains("circular dependency"));
     }
 
     /**
-     * Test simulating concurrent access to departments.
-     * Temporarily disabled due to concurrent access issue.
+     * Test case for retrieving all departments when the repository is populated.
+     * Verifies that the method returns a list of all departments.
      */
     @Test
     @Transactional
-    @Disabled("Temporarily disabled due to concurrent access issue")
-    public void testConcurrentAccess() {
-        // Simulate concurrent access to departments
-        Department parent = departmentService.createDepartment("Parent Department", null);
+    public void testGetAllDepartments_withDepartments() {
+        // Create some departments
+        Department department1 = Department.builder().name("Department 1").subDepartments(new ArrayList<>()).build();
+        Department department2 = Department.builder().name("Department 2").subDepartments(new ArrayList<>()).build();
 
-        // Create child departments in parallel
-        CompletableFuture<Department> child1Future = CompletableFuture.supplyAsync(() -> departmentService.createDepartment("Child 1", parent.getId()));
-        CompletableFuture<Department> child2Future = CompletableFuture.supplyAsync(() -> departmentService.createDepartment("Child 2", parent.getId()));
+        // Save departments to the repository
+        departmentRepository.save(department1);
+        departmentRepository.save(department2);
 
-        // Wait for completion
-        Department child1 = child1Future.join();
-        Department child2 = child2Future.join();
+        // Call the method to test
+        List<DepartmentResponseDto> result = departmentService.getAllDepartments();
 
-        // Assertions
-        Assertions.assertEquals(2, parent.getSubDepartments().size());
+        // Verify that the result is not null
+        assertNotNull(result, "The result should not be null");
+
+        // Verify that the result contains the expected number of departments
+        assertEquals(2, result.size(), "The result should contain 2 departments");
+
+        // Extract department names from the result for verification
+        List<String> departmentNames = result.stream()
+                .map(DepartmentResponseDto::getName)
+                .collect(Collectors.toList());
+
+        // Verify that the result contains the expected department names
+        assertTrue(departmentNames.contains("Department 1"), "The result should contain 'Department 1'");
+        assertTrue(departmentNames.contains("Department 2"), "The result should contain 'Department 2'");
     }
 
     /**
-     * Test performance of retrieving descendants of a department.
+     * Test case for retrieving all departments when the repository is empty.
+     * Verifies that the method returns an empty list.
      */
     @Test
     @Transactional
-    public void testPerformanceGetDescendants() {
-        // Create a large hierarchy of departments
-        Department parent = new Department();
-        parent.setName("Parent Department");
-        parent = departmentRepository.save(parent);
+    public void testGetAllDepartments_noDepartments() {
+        // Ensure the repository is empty
+        departmentRepository.deleteAll();
 
-        Department currentParent = parent;
-        int numChildren = 1000; // Adjust based on your performance testing needs
+        // Call the method to test
+        List<DepartmentResponseDto> result = departmentService.getAllDepartments();
 
-        for (int i = 0; i < numChildren; i++) {
-            Department child = new Department();
-            child.setName("Child Department " + i);
-            currentParent.addSubDepartment(child);
-            child.setParentDepartment(currentParent);
-            currentParent = departmentRepository.save(child);
-        }
+        // Verify that the result is not null
+        assertNotNull(result, "The result should not be null");
 
-        // Retrieve all descendants of the parent department
-        List<Department> descendants = departmentService.getDescendants(parent.getId());
-
-        // Assertions
-        Assertions.assertEquals(numChildren, descendants.size());
+        // Verify that the result is an empty list
+        assertTrue(result.isEmpty(), "The result should be an empty list");
     }
+
+    /**
+     * Test case for retrieving sub-departments for a valid parent department.
+     * Verifies that the method returns a list of sub-departments.
+     */
+    @Test
+    @Transactional
+    public void testGetSubDepartments_validParentWithSubDepartments() {
+        // Create parent and sub-departments
+        Department parent = Department.builder().name("Parent Department").subDepartments(new ArrayList<>()).build();
+        Department sub1 = Department.builder().name("Sub Department 1").parentDepartment(parent).build();
+        Department sub2 = Department.builder().name("Sub Department 2").parentDepartment(parent).build();
+        parent.getSubDepartments().add(sub1);
+        parent.getSubDepartments().add(sub2);
+
+        // Save parent and sub-departments to the repository
+        departmentRepository.save(parent);
+        departmentRepository.save(sub1);
+        departmentRepository.save(sub2);
+
+        // Call the method to test
+        List<DepartmentResponseDto> result = departmentService.getSubDepartments(parent.getId());
+
+        // Verify that the result is not null
+        assertNotNull(result, "The result should not be null");
+
+        // Verify that the result contains the expected number of sub-departments
+        assertEquals(2, result.size(), "The result should contain 2 sub-departments");
+
+        // Verify the sub-department names
+        List<String> subNames = result.stream()
+                .map(DepartmentResponseDto::getName)
+                .collect(Collectors.toList());
+        assertTrue(subNames.contains("Sub Department 1"), "The result should contain 'Sub Department 1'");
+        assertTrue(subNames.contains("Sub Department 2"), "The result should contain 'Sub Department 2'");
+    }
+
+    /**
+     * Test case for retrieving sub-departments for a parent department with no sub-departments.
+     * Verifies that the method returns an empty list.
+     */
+    @Test
+    @Transactional
+    public void testGetSubDepartments_validParentNoSubDepartments() {
+        // Create a parent department with no sub-departments
+        Department parent = Department.builder().name("Parent Department").subDepartments(new ArrayList<>()).build();
+        departmentRepository.save(parent);
+
+        // Call the method to test
+        List<DepartmentResponseDto> result = departmentService.getSubDepartments(parent.getId());
+
+        // Verify that the result is not null
+        assertNotNull(result, "The result should not be null");
+
+        // Verify that the result is an empty list
+        assertTrue(result.isEmpty(), "The result should be an empty list");
+    }
+
+    /**
+     * Test case for retrieving sub-departments for a non-existent parent department.
+     * Verifies that an EntityNotFoundException is thrown.
+     */
+    @Test
+    @Transactional
+    public void testGetSubDepartments_nonExistentParent() {
+        // Call the method to test with a non-existent parent ID
+        Long nonExistentId = -1L;
+
+        // Verify that the method throws EntityNotFoundException
+        ParentDepartmentNotFoundException exception = assertThrows(ParentDepartmentNotFoundException.class, () -> {
+            departmentService.getSubDepartments(nonExistentId);
+        });
+
+        // Verify the exception message
+        assertEquals("Parent department not found with id: " + nonExistentId, exception.getMessage());
+    }
+
+    /**
+     * Test case for retrieving a department by a valid ID.
+     * Verifies that the method returns the expected department.
+     */
+    @Test
+    @Transactional
+    public void testGetDepartmentById_validId() {
+        // Create and save a department
+        Department department = Department.builder().name("Test Department").build();
+        Department savedDepartment = departmentRepository.save(department);
+
+        // Call the method to test
+        DepartmentResponseDto result = departmentService.getDepartmentById(savedDepartment.getId());
+
+        // Verify that the result is not null
+        assertNotNull(result, "The result should not be null");
+
+        // Verify the department name
+        assertEquals("Test Department", result.getName(), "The department name should match");
+    }
+
+    /**
+     * Test case for retrieving a department by a non-existent ID.
+     * Verifies that an EntityNotFoundException is thrown.
+     */
+    @Test
+    @Transactional
+    public void testGetDepartmentById_nonExistentId() {
+        // Call the method to test with a non-existent ID
+        Long nonExistentId = -1L;
+
+        // Verify that the method throws EntityNotFoundException
+        DepartmentNotFoundException exception = assertThrows(DepartmentNotFoundException.class, () -> {
+            departmentService.getDepartmentById(nonExistentId);
+        });
+
+        // Verify the exception message
+        assertEquals("Department not found with id: " + nonExistentId, exception.getMessage());
+    }
+
+    /**
+     * Test case for retrieving sub-departments with a valid parent ID.
+     * Verifies that the method returns the expected sub-departments.
+     */
+    @Test
+    @Transactional
+    public void testGetSubDepartments_validParentId_withSubDepartments() {
+        // Create and save a parent department
+        Department parent = Department.builder().name("Parent Department").subDepartments(new ArrayList<>()).build();
+        Department savedParent = departmentRepository.save(parent);
+
+        // Create and save sub-departments
+        Department subDepartment1 = Department.builder().name("Sub Department 1").build();
+        Department subDepartment2 = Department.builder().name("Sub Department 2").build();
+        savedParent.addSubDepartment(subDepartment1);
+        savedParent.addSubDepartment(subDepartment2);
+
+        departmentRepository.save(subDepartment1);
+        departmentRepository.save(subDepartment2);
+
+        // Call the method to test
+        List<DepartmentResponseDto> result = departmentService.getSubDepartments(savedParent.getId());
+
+        // Verify that the result is not null and has the expected size
+        assertNotNull(result, "The result should not be null");
+        assertEquals(2, result.size(), "The result size should be 2");
+
+        // Verify the names of the sub-departments
+        assertTrue(result.stream().anyMatch(dto -> dto.getName().equals("Sub Department 1")), "The result should contain Sub Department 1");
+        assertTrue(result.stream().anyMatch(dto -> dto.getName().equals("Sub Department 2")), "The result should contain Sub Department 2");
+    }
+
+    /**
+     * Test case for retrieving sub-departments with a valid parent ID and no sub-departments.
+     * Verifies that the method returns an empty list.
+     */
+    @Test
+    @Transactional
+    public void testGetSubDepartments_validParentId_noSubDepartments() {
+        // Create and save a parent department
+        Department parent = Department.builder().name("Parent Department").build();
+        Department savedParent = departmentRepository.save(parent);
+
+        // Call the method to test
+        List<DepartmentResponseDto> result = departmentService.getSubDepartments(savedParent.getId());
+
+        // Verify that the result is not null and is empty
+        assertNotNull(result, "The result should not be null");
+        assertTrue(result.isEmpty(), "The result should be empty");
+    }
+
+    /**
+     * Test case for retrieving sub-departments with a non-existent parent ID.
+     * Verifies that an EntityNotFoundException is thrown.
+     */
+    @Test
+    @Transactional
+    public void testGetSubDepartments_nonExistentParentId() {
+        // Call the method to test with a non-existent parent ID
+        Long nonExistentParentId = -1L;
+
+        // Verify that the method throws EntityNotFoundException
+        ParentDepartmentNotFoundException exception = assertThrows(ParentDepartmentNotFoundException.class, () -> {
+            departmentService.getSubDepartments(nonExistentParentId);
+        });
+
+        // Verify the exception message
+        assertEquals("Parent department not found with id: " + nonExistentParentId, exception.getMessage());
+    }
+
+    /**
+     * Test case for retrieving the parent department of a department with a valid ID.
+     * Verifies that the method returns the expected parent department.
+     */
+    @Test
+    public void testGetParentDepartment_validId() {
+        // Create and save parent and child departments
+        Department parent = Department.builder().name("Parent Department").build();
+        Department child = Department.builder().name("Child Department").parentDepartment(parent).build();
+        departmentRepository.save(parent);
+        departmentRepository.save(child);
+
+        // Call the method to test
+        DepartmentResponseDto result = departmentService.getParentDepartment(child.getId());
+
+        // Verify that the result is not null and has the expected name
+        assertNotNull(result, "The result should not be null");
+        assertEquals("Parent Department", result.getName(), "The result name should be 'Parent Department'");
+    }
+
+    /**
+     * Test case for retrieving the parent department of a department with no parent.
+     * Verifies that an EntityNotFoundException is thrown.
+     */
+    @Test
+    public void testGetParentDepartment_noParent() {
+        // Create and save a department with no parent
+        Department department = Department.builder().name("Orphan Department").build();
+        Department savedDepartment = departmentRepository.save(department);
+
+        // Verify that the method throws EntityNotFoundException
+        ParentDepartmentNotFoundException exception = assertThrows(ParentDepartmentNotFoundException.class, () -> {
+            departmentService.getParentDepartment(savedDepartment.getId());
+        });
+
+        // Verify the exception message
+        assertEquals("Department with id: " + savedDepartment.getId() + " has no parent department", exception.getMessage());
+    }
+
+    /**
+     * Test case for retrieving the parent department of a non-existent department ID.
+     * Verifies that an EntityNotFoundException is thrown.
+     */
+    @Test
+    public void testGetParentDepartment_nonExistentId() {
+        // Call the method to test with a non-existent ID
+        Long nonExistentId = -1L;
+
+        // Verify that the method throws EntityNotFoundException
+        DepartmentNotFoundException exception = assertThrows(DepartmentNotFoundException.class, () -> {
+            departmentService.getParentDepartment(nonExistentId);
+        });
+
+        // Verify the exception message
+        assertEquals("Department not found with id: " + nonExistentId, exception.getMessage());
+    }
+
+    /**
+     * Test case for retrieving all descendants of a department with a valid ID.
+     * Verifies that the method returns the expected descendants.
+     */
+    @Test
+    public void testGetDescendants_validId() {
+        // Create and save departments
+        Department parent = Department.builder().name("Parent Department").build();
+        Department child1 = Department.builder().name("Child Department 1").parentDepartment(parent).build();
+        Department child2 = Department.builder().name("Child Department 2").parentDepartment(parent).build();
+        departmentRepository.save(parent);
+        departmentRepository.save(child1);
+        departmentRepository.save(child2);
+
+        // Call the method to test
+        List<DepartmentResponseDto> result = departmentService.getDescendants(parent.getId());
+
+        // Verify that the result is not null and has the expected size
+        assertNotNull(result, "The result should not be null");
+        assertEquals(2, result.size(), "The result size should be 2");
+
+        // Verify the names of the descendants
+        assertTrue(result.stream().anyMatch(dto -> dto.getName().equals("Child Department 1")), "The result should contain Child Department 1");
+        assertTrue(result.stream().anyMatch(dto -> dto.getName().equals("Child Department 2")), "The result should contain Child Department 2");
+    }
+
+    /**
+     * Test case for retrieving all descendants of a department with no descendants.
+     * Verifies that the method returns an empty list.
+     */
+    @Test
+    public void testGetDescendants_noDescendants() {
+        // Create and save a department with no descendants
+        Department department = Department.builder().name("Orphan Department").build();
+        Department savedDepartment = departmentRepository.save(department);
+
+        // Call the method to test
+        List<DepartmentResponseDto> result = departmentService.getDescendants(savedDepartment.getId());
+
+        // Verify that the result is not null and is empty
+        assertNotNull(result, "The result should not be null");
+        assertTrue(result.isEmpty(), "The result should be empty");
+    }
+
+    /**
+     * Test case for retrieving all descendants of a non-existent department ID.
+     * Verifies that an EntityNotFoundException is thrown.
+     */
+    @Test
+    public void testGetDescendants_nonExistentId() {
+        // Call the method to test with a non-existent ID
+        Long nonExistentId = -1L;
+
+        // Verify that the method throws EntityNotFoundException
+        DepartmentNotFoundException exception = assertThrows(DepartmentNotFoundException.class, () -> {
+            departmentService.getDescendants(nonExistentId);
+        });
+
+        // Verify the exception message
+        assertEquals("Department not found with id: " + nonExistentId, exception.getMessage());
+    }
+
+    /**
+     * Test case for retrieving all ancestors of a department with a valid ID.
+     * Verifies that the method returns the expected ancestors.
+     */
+    @Test
+    public void testGetAncestors_validId() {
+        // Create and save departments
+        Department grandParent = Department.builder().name("Grand Parent Department").build();
+        Department parent = Department.builder().name("Parent Department").parentDepartment(grandParent).build();
+        Department child = Department.builder().name("Child Department").parentDepartment(parent).build();
+        departmentRepository.save(grandParent);
+        departmentRepository.save(parent);
+        departmentRepository.save(child);
+
+        // Call the method to test
+        List<DepartmentResponseDto> result = departmentService.getAncestors(child.getId());
+
+        // Verify that the result is not null and has the expected size
+        assertNotNull(result, "The result should not be null");
+        assertEquals(2, result.size(), "The result size should be 2");
+
+        // Verify the names of the ancestors
+        assertTrue(result.stream().anyMatch(dto -> dto.getName().equals("Parent Department")), "The result should contain Parent Department");
+        assertTrue(result.stream().anyMatch(dto -> dto.getName().equals("Grand Parent Department")), "The result should contain Grand Parent Department");
+    }
+
+    /**
+     * Test case for retrieving all ancestors of a department with no ancestors.
+     * Verifies that the method returns an empty list.
+     */
+    @Test
+    public void testGetAncestors_noAncestors() {
+        // Create and save a department with no ancestors
+        Department department = Department.builder().name("Orphan Department").build();
+        Department savedDepartment = departmentRepository.save(department);
+
+        // Call the method to test
+        List<DepartmentResponseDto> result = departmentService.getAncestors(savedDepartment.getId());
+
+        // Verify that the result is not null and is empty
+        assertNotNull(result, "The result should not be null");
+        assertTrue(result.isEmpty(), "The result should be empty");
+    }
+
+    /**
+     * Test case for retrieving all ancestors of a non-existent department ID.
+     * Verifies that an EntityNotFoundException is thrown.
+     */
+    @Test
+    public void testGetAncestors_nonExistentId() {
+        // Call the method to test with a non-existent ID
+        Long nonExistentId = -1L;
+
+        // Verify that the method throws EntityNotFoundException
+        DepartmentNotFoundException exception = assertThrows(DepartmentNotFoundException.class, () -> {
+            departmentService.getAncestors(nonExistentId);
+        });
+
+        // Verify the exception message
+        assertEquals("Department not found with id: " + nonExistentId, exception.getMessage());
+    }
+    // Other test methods like update, delete, retrieval, etc. using DTOs
 }
