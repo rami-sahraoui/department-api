@@ -7,13 +7,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tn.engn.departmentapi.dto.DepartmentRequestDto;
 import tn.engn.departmentapi.dto.DepartmentResponseDto;
-import tn.engn.departmentapi.service.AdjacencyListDepartmentService;
+import tn.engn.departmentapi.service.DepartmentService;
 
 import java.util.List;
 
@@ -22,15 +22,11 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/departments")
+@RequiredArgsConstructor
 @Tag(name = "Department Management", description = "Endpoints for managing departments")
 public class DepartmentController {
 
-    private final AdjacencyListDepartmentService departmentService;
-
-    @Autowired
-    public DepartmentController(AdjacencyListDepartmentService departmentService) {
-        this.departmentService = departmentService;
-    }
+    private final DepartmentService departmentService;
 
     /**
      * Creates a new department.

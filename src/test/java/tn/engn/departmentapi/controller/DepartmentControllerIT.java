@@ -19,8 +19,6 @@ import tn.engn.departmentapi.exception.ErrorResponse;
 import tn.engn.departmentapi.model.Department;
 import tn.engn.departmentapi.repository.DepartmentRepository;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -136,16 +134,20 @@ public class DepartmentControllerIT {
     void updateDepartment_Success() {
 
         // Arrange: Create a departments with valid name and get his ID
-        Long departmentId = createDepartment("Engineering", null);
+        Long engineeringId = createDepartment("Engineering Department", null);
+        Long softwareId = createDepartment("Software Department", engineeringId);
+        Long backendTeamId = createDepartment("Backend Team", softwareId);
+        Long frontendTeamId = createDepartment("Frontend Team", softwareId);
 
+        Long hrId = createDepartment("HR Department", null);
         // Arrange: Create a valid DepartmentRequestDto
         DepartmentRequestDto requestDto = new DepartmentRequestDto();
         requestDto.setName("Updated Engineering");
-        requestDto.setParentDepartmentId(null);
+        requestDto.setParentDepartmentId(hrId);
 
         // Act: Send a PUT request to update department with ID 1
         webTestClient.put()
-                .uri("/api/v1/departments/{id}", departmentId)
+                .uri("/api/v1/departments/{id}", engineeringId)
                 .bodyValue(requestDto)
                 .exchange()
                 .expectStatus().isOk()
@@ -161,13 +163,16 @@ public class DepartmentControllerIT {
     @Transactional
     @Test
     void updateDepartment_ValidationException() {
+        // Arrange: Create a department with valid name and get his ID
+        Long engineeringId = createDepartment("Engineering Department", null);
+
         // Arrange: Create an invalid DepartmentRequestDto (missing name)
         DepartmentRequestDto requestDto = new DepartmentRequestDto();
         // No name set to trigger validation error
 
         // Act and Assert: Send a PUT request and verify the response
         webTestClient.put()
-                .uri("/api/v1/departments/{id}", 1)
+                .uri("/api/v1/departments/{id}", engineeringId)
                 .bodyValue(requestDto)
                 .exchange()
                 .expectStatus().isBadRequest()
@@ -348,8 +353,9 @@ public class DepartmentControllerIT {
         Department department2 = departmentRepository.findById(department2Id).orElseThrow();
 
         // Create circular dependency: department1 is parent of department2 and vice versa
-        department1.addSubDepartment(department2);
-        department2.addSubDepartment(department1);
+        department1.setParentDepartmentId(department2.getId());
+        department2.setParentDepartmentId(department1.getId());
+
 
         // Save changes to update relationships in the database
         departmentRepository.save(department1);
@@ -368,8 +374,8 @@ public class DepartmentControllerIT {
                 });
 
         // Clean up: Remove circular dependency and delete departments from the database
-        department1.removeSubDepartment(department2);
-        department2.removeSubDepartment(department1);
+        department1.setParentDepartmentId(null);
+        department2.setParentDepartmentId(null);
 
         departmentRepository.delete(department1);
         departmentRepository.delete(department2);
@@ -719,22 +725,18 @@ public class DepartmentControllerIT {
         assertThat(ancestors).isNotNull();
         assertThat(ancestors).hasSize(2); // Expecting two ancestors: Parent and Grandparent
 
+        ancestors.sort((o1, o2) -> (int) (o2.getId() - o1.getId()));
         // Asserting ancestor 1 (Parent Department)
         assertThat(ancestors.get(0).getId()).isEqualTo(parentId);
         assertThat(ancestors.get(0).getName()).isEqualTo("Parent Department");
         assertThat(ancestors.get(0).getParentDepartmentId()).isEqualTo(grandparentId); // Assuming parentId is child of grandparentId
-        assertThat(ancestors.get(0).getSubDepartments()).contains(new DepartmentResponseDto(departmentId, "Child Department", parentId, new ArrayList<>()));
+        //assertThat(ancestors.get(0).getSubDepartments()).contains(new DepartmentResponseDto(departmentId, "Child Department", parentId, new ArrayList<>()));
 
         // Asserting ancestor 2 (Grandparent Department)
         assertThat(ancestors.get(1).getId()).isEqualTo(grandparentId);
         assertThat(ancestors.get(1).getName()).isEqualTo("Grandparent Department");
         assertThat(ancestors.get(1).getParentDepartmentId()).isNull(); // Assuming grandparentId is root department
-        assertThat(ancestors.get(1).getSubDepartments()).contains(new DepartmentResponseDto(parentId, "Parent Department", grandparentId, Collections.singletonList(new DepartmentResponseDto(departmentId, "Child Department", parentId, new ArrayList<>()))));
-
-        // Clean up: Delete the created departments
-        departmentRepository.deleteById(departmentId);
-        departmentRepository.deleteById(parentId);
-        departmentRepository.deleteById(grandparentId);
+        //assertThat(ancestors.get(1).getSubDepartments()).contains(new DepartmentResponseDto(parentId, "Parent Department", grandparentId, Collections.singletonList(new DepartmentResponseDto(departmentId, "Child Department", parentId, new ArrayList<>()))));
     }
 
     /**

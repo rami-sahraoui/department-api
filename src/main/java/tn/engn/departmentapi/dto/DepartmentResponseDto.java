@@ -7,6 +7,9 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+/**
+ * DTO for representing a Department in response.
+ */
 @Data
 @Builder
 @NoArgsConstructor
