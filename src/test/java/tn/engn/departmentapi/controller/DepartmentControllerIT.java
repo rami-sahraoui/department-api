@@ -354,7 +354,10 @@ public class DepartmentControllerIT {
 
         // Create circular dependency: department1 is parent of department2 and vice versa
         department1.setParentDepartmentId(department2.getId());
+        department1.setPath("/" + department1.getId() + "/");
+
         department2.setParentDepartmentId(department1.getId());
+        department2.setPath("/" + department1.getId()  + "/" + department2.getId() + "/" + department1.getId()  + "/");
 
 
         // Save changes to update relationships in the database
@@ -621,7 +624,7 @@ public class DepartmentControllerIT {
                 .expectBody(ErrorResponse.class)
                 .value(response -> {
                     assertThat(response.getStatus()).isEqualTo(404);
-                    assertThat(response.getMessage()).contains("has no parent department");
+                    assertThat(response.getMessage()).contains("has no parent");
                     assertThat(response.getTimestamp()).isNotNull();
                 });
     }

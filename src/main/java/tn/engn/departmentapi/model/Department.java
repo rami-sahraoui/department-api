@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 /**
- * Represents a department entity in the Nested Set Model with support for multi-tree structures.
+ * Represents a department entity in the Materialized Path Model with support for hierarchical structures.
  */
 @Entity
 @Table(name = "departments")
@@ -34,28 +34,12 @@ public class Department {
     private Long parentDepartmentId;
 
     /**
-     * ID of the root or master department to which this department belongs.
+     * Path representing the hierarchical position of the department in the Materialized Path Model.
+     * The path is a string of concatenated IDs of all ancestors including the department itself,
+     * separated by a delimiter, e.g., "/1/2/3/".
      */
-    @Column(name = "root_id")
-    private Long rootId;
-
-    /**
-     * Left index in the Nested Set Model.
-     */
-    @Column(name = "left_index", nullable = false)
-    private Integer leftIndex;
-
-    /**
-     * Right index in the Nested Set Model.
-     */
-    @Column(name = "right_index", nullable = false)
-    private Integer rightIndex;
-
-    /**
-     * Level of the department in the hierarchy.
-     */
-    @Column(name = "level", nullable = false)
-    private Integer level;
+    @Column(name = "path", nullable = false, length = 1024)
+    private String path;
 
     // Additional fields, relationships, and methods if needed
 }

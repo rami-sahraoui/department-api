@@ -13,8 +13,11 @@ import java.util.Optional;
 
 @Repository
 public interface DepartmentRepository extends JpaRepository<Department, Long>, QuerydslPredicateExecutor<Department> {
-    @Query("SELECT d FROM Department d WHERE d.leftIndex >= :leftIndex AND d.rightIndex <= :rightIndex ORDER BY d.leftIndex ASC")
-    List<Department> findSubDepartments(@Param("leftIndex") int leftIndex, @Param("rightIndex") int rightIndex);
+    List<Department> findByParentDepartmentId(Long id);
 
-   List<Department> findAllByOrderByLeftIndexAsc();
+    boolean existsByParentDepartmentId(Long id);
+
+    List<Department> findByNameContaining(String name);
+
+    List<Department> findByPathStartingWith(String path);
 }
