@@ -1,23 +1,16 @@
 package tn.engn.departmentapi.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.querydsl.QuerydslPredicateExecutor;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 import tn.engn.departmentapi.model.Department;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
-import java.util.Optional;
 
-@Repository
-public interface DepartmentRepository extends JpaRepository<Department, Long>, QuerydslPredicateExecutor<Department> {
-    List<Department> findByParentDepartmentId(Long id);
+/**
+ * Repository interface for Department entities.
+ * Provides CRUD operations and custom query methods for the Department entity.
+ */
+public interface DepartmentRepository extends JpaRepository<Department, Long> {
+    List<Department> findByParentDepartmentId(Long parentId);
 
-    boolean existsByParentDepartmentId(Long id);
-
-    List<Department> findByNameContaining(String name);
-
-    List<Department> findByPathStartingWith(String path);
+    List<Department> findByNameContainingIgnoreCase(String name);
 }

@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 /**
- * Represents a department entity in the Materialized Path Model with support for hierarchical structures.
+ * Represents a department entity in the Closure Table Model with support for hierarchical structures.
  */
 @Entity
 @Table(name = "departments")
@@ -32,14 +32,6 @@ public class Department {
      */
     @Column(name = "parent_department_id")
     private Long parentDepartmentId;
-
-    /**
-     * Path representing the hierarchical position of the department in the Materialized Path Model.
-     * The path is a string of concatenated IDs of all ancestors including the department itself,
-     * separated by a delimiter, e.g., "/1/2/3/".
-     */
-    @Column(name = "path", nullable = false, length = 1024)
-    private String path;
 
     // Additional fields, relationships, and methods if needed
 }

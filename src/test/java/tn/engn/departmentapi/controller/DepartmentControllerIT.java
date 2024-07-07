@@ -17,6 +17,8 @@ import tn.engn.departmentapi.dto.DepartmentRequestDto;
 import tn.engn.departmentapi.dto.DepartmentResponseDto;
 import tn.engn.departmentapi.exception.ErrorResponse;
 import tn.engn.departmentapi.model.Department;
+import tn.engn.departmentapi.model.DepartmentClosure;
+import tn.engn.departmentapi.repository.DepartmentClosureRepository;
 import tn.engn.departmentapi.repository.DepartmentRepository;
 
 import java.util.List;
@@ -40,12 +42,16 @@ public class DepartmentControllerIT {
     @Autowired
     private DepartmentRepository departmentRepository;
 
+    @Autowired
+    private DepartmentClosureRepository departmentClosureRepository;
+
     /**
      * Clean up the database after each test to ensure isolation.
      */
     @AfterEach
     public void cleanUp() {
         departmentRepository.deleteAll();
+        departmentClosureRepository.deleteAll();
     }
 
     /**
@@ -346,7 +352,7 @@ public class DepartmentControllerIT {
     void deleteDepartment_DataIntegrityException() {
         // Arrange: Create two departments with valid names and get their IDs
         Long department1Id = createDepartment("Engineering", null);
-        Long department2Id = createDepartment("IT", null);
+        Long department2Id = createDepartment("IT", department1Id);
 
         // Get department1 and department2 from the repository
         Department department1 = departmentRepository.findById(department1Id).orElseThrow();
@@ -354,11 +360,14 @@ public class DepartmentControllerIT {
 
         // Create circular dependency: department1 is parent of department2 and vice versa
         department1.setParentDepartmentId(department2.getId());
-        department1.setPath("/" + department1.getId() + "/");
 
-        department2.setParentDepartmentId(department1.getId());
-        department2.setPath("/" + department1.getId()  + "/" + department2.getId() + "/" + department1.getId()  + "/");
-
+        DepartmentClosure closure = departmentClosureRepository.save(
+                DepartmentClosure.builder()
+                        .ancestorId(department2Id)
+                        .descendantId(department1Id)
+                        .level(1)
+                        .build()
+        );
 
         // Save changes to update relationships in the database
         departmentRepository.save(department1);
@@ -382,6 +391,7 @@ public class DepartmentControllerIT {
 
         departmentRepository.delete(department1);
         departmentRepository.delete(department2);
+        departmentClosureRepository.delete(closure);
     }
 
 
