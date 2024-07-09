@@ -4,6 +4,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,7 +22,6 @@ import tn.engn.departmentapi.model.QDepartment;
 import tn.engn.departmentapi.repository.DepartmentRepository;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -43,6 +43,7 @@ public class NestedSetDepartmentService implements DepartmentService {
     @Autowired
     private JPAQueryFactory jpaQueryFactory;
 
+    @Setter
     @Value("${department.max-name-length}")
     private int maxNameLength;
 
@@ -81,6 +82,7 @@ public class NestedSetDepartmentService implements DepartmentService {
 
             // Update left and right indexes of existing departments
             updateIndexesForNewDepartment(parentRightIndex);
+            entityManager.flush();
         }
 
         // Map the request DTO to an entity
@@ -93,9 +95,12 @@ public class NestedSetDepartmentService implements DepartmentService {
             // Handle child department creation
             handleChildDepartmentCreation(department, parentRightIndex, parentLevel, rootId);
         }
+        entityManager.flush();
 
         // Save the new department entity
         Department savedDepartment = departmentRepository.save(department);
+
+        entityManager.refresh(savedDepartment);
 
         // Convert the saved entity to a response DTO and return it
         return departmentMapper.toDto(savedDepartment);
@@ -143,7 +148,6 @@ public class NestedSetDepartmentService implements DepartmentService {
      *
      * @param parentRightIndex the right index of the parent department
      */
-    @Transactional
     protected void updateIndexesForNewDepartment(Integer parentRightIndex) {
         QDepartment qDepartment = QDepartment.department;
 
@@ -163,7 +167,6 @@ public class NestedSetDepartmentService implements DepartmentService {
      *
      * @param department the department entity to be created
      */
-    @Transactional
     protected void handleRootDepartmentCreation(Department department) {
         Integer maxRightIndex = jpaQueryFactory.select(QDepartment.department.rightIndex.max())
                 .from(QDepartment.department)
@@ -188,10 +191,6 @@ public class NestedSetDepartmentService implements DepartmentService {
         // Save the department again to update the rootId
         department = departmentRepository.save(department);
         log.info("Department saved with rootId: {}", department.getRootId());
-
-        // Ensure the entity is flushed and refreshed
-        entityManager.flush();
-        entityManager.refresh(department);
     }
 
     /**
@@ -468,23 +467,13 @@ public class NestedSetDepartmentService implements DepartmentService {
                 .execute();
     }
 
-    /**
-     * Updates an existing department's name and optionally changes its parent department.
-     *
-     * @param departmentId         the ID of the department to update
-     * @param updatedDepartmentDto the DTO containing updated department information
-     * @return the updated department DTO
-     * @throws DepartmentNotFoundException       if the department with given ID is not found
-     * @throws ParentDepartmentNotFoundException if the parent department with given ID is not found
-     * @throws DataIntegrityException            if updating the department violates data integrity constraints
-     * @throws ValidationException               if the updated department name is invalid (empty, null, or exceeds max length)
-     */
     @Transactional
     @Override
     public DepartmentResponseDto updateDepartment(Long departmentId, DepartmentRequestDto updatedDepartmentDto)
             throws DepartmentNotFoundException, ParentDepartmentNotFoundException, DataIntegrityException, ValidationException {
         String name = updatedDepartmentDto.getName();
         Long parentId = updatedDepartmentDto.getParentDepartmentId();
+
         // Fetch the existing department by ID
         Department existingDepartment = departmentRepository.findById(departmentId)
                 .orElseThrow(() -> new DepartmentNotFoundException("Department not found with ID: " + departmentId));
@@ -495,11 +484,14 @@ public class NestedSetDepartmentService implements DepartmentService {
         // Check if the department's name needs updating
         if (!existingDepartment.getName().equals(name)) {
             existingDepartment.setName(name);
+            entityManager.flush();
         }
 
         // Check if the parent department is being changed
-        if (parentId != null && !parentId.equals(existingDepartment.getParentDepartmentId())) {
-
+        if (parentId == null && existingDepartment.getParentDepartmentId() != null) {
+            // Move to root department
+            moveToRoot(existingDepartment);
+        } else if (parentId != null && !parentId.equals(existingDepartment.getParentDepartmentId())) {
             // Fetch and validate the new parent department
             Department newParentDepartment = departmentRepository.findById(parentId)
                     .orElseThrow(() -> new ParentDepartmentNotFoundException("Parent department not found with ID: " + parentId));
@@ -509,12 +501,9 @@ public class NestedSetDepartmentService implements DepartmentService {
 
             // Adjust nested set indexes and levels for moving the department
             moveSubtree(existingDepartment, newParentDepartment);
-
-            // Fetch updated entities
-            entityManager.refresh(existingDepartment);
-            entityManager.refresh(newParentDepartment);
-
         }
+
+        entityManager.refresh(existingDepartment);
 
         // Save the updated department
         Department updatedDepartment = departmentRepository.save(existingDepartment);
@@ -555,7 +544,6 @@ public class NestedSetDepartmentService implements DepartmentService {
      * @param department         the department to be moved
      * @param newParentDepartment the new parent department
      */
-    @Transactional
     protected void moveSubtree(Department department, Department newParentDepartment) {
         int subtreeSize = department.getRightIndex() - department.getLeftIndex() + 1;
         int indexShift = newParentDepartment.getRightIndex() - department.getLeftIndex();
@@ -567,33 +555,39 @@ public class NestedSetDepartmentService implements DepartmentService {
 
         // Shift indexes to make space for the new subtree
         shiftIndexes(newParentDepartment.getRightIndex(), subtreeSize);
+        entityManager.flush();
 
         // Move the subtree to the new space and update levels
         updateSubtreeIndexesAndLevels(department, indexShift, levelShift);
+        entityManager.flush();
 
         // Compact the space left by the moved subtree
         compactIndexes(department.getLeftIndex(), subtreeSize);
+        entityManager.flush();
 
         // Update parent and root IDs of the subtree
         updateSubtreeParentAndRootIds(department, newParentDepartment);
+        entityManager.flush();
     }
 
-    /**
-     * Updates the levels, the left and right indexes of the subtree.
-     *
-     * @param department the department to be moved
-     * @param indexShift    the amount to shift by the indexes
-     * @param levelShift    the amount to shift by the levels
-     */
-    @Transactional
-    protected void updateSubtreeIndexesAndLevels(Department department, int indexShift, int levelShift) {
-        jpaQueryFactory.update(QDepartment.department)
-                .set(QDepartment.department.leftIndex, QDepartment.department.leftIndex.add(indexShift))
-                .set(QDepartment.department.rightIndex, QDepartment.department.rightIndex.add(indexShift))
-                .set(QDepartment.department.level, QDepartment.department.level.add(levelShift))
-                .where(QDepartment.department.leftIndex.between(department.getLeftIndex(), department.getRightIndex()))
-                .execute();
-    }
+        /**
+         * Updates the levels, the left and right indexes of the subtree.
+         *
+         * @param department the department to be moved
+         * @param indexShift    the amount to shift by the indexes
+         * @param levelShift    the amount to shift by the levels
+         */
+        protected void updateSubtreeIndexesAndLevels(Department department, int indexShift, int levelShift) {
+            log.info("Updating subtree indexes and levels for department {}. Index shift: {}, Level shift: {}",
+                    department.getId(), indexShift, levelShift);
+
+            jpaQueryFactory.update(QDepartment.department)
+                    .set(QDepartment.department.leftIndex, QDepartment.department.leftIndex.add(indexShift))
+                    .set(QDepartment.department.rightIndex, QDepartment.department.rightIndex.add(indexShift))
+                    .set(QDepartment.department.level, QDepartment.department.level.add(levelShift))
+                    .where(QDepartment.department.leftIndex.between(department.getLeftIndex(), department.getRightIndex()))
+                    .execute();
+        }
 
     /**
      * Shifts indexes to make space for the new subtree.
@@ -601,7 +595,6 @@ public class NestedSetDepartmentService implements DepartmentService {
      * @param startIndex the starting index for the shift
      * @param shiftBy    the amount to shift by
      */
-    @Transactional
     protected void shiftIndexes(int startIndex, int shiftBy) {
         jpaQueryFactory.update(QDepartment.department)
                 .set(QDepartment.department.leftIndex, QDepartment.department.leftIndex.add(shiftBy))
@@ -620,8 +613,9 @@ public class NestedSetDepartmentService implements DepartmentService {
      * @param startIndex the starting index for the compacting
      * @param compactBy  the amount to compact by
      */
-    @Transactional
     protected void compactIndexes(int startIndex, int compactBy) {
+        log.info("Compacting indexes from {} by size {}", startIndex, compactBy);
+
         jpaQueryFactory.update(QDepartment.department)
                 .set(QDepartment.department.leftIndex, QDepartment.department.leftIndex.subtract(compactBy))
                 .where(QDepartment.department.leftIndex.goe(startIndex))
@@ -642,9 +636,9 @@ public class NestedSetDepartmentService implements DepartmentService {
      * @param department          the department being moved
      * @param newParentDepartment the new parent department for the moved department
      */
-    @Transactional
     protected void updateSubtreeParentAndRootIds(Department department, Department newParentDepartment) {
         // Update the rootId for all nodes in the subtree
+        log.info("Updating parent and root Ids of {} subtree to match the new parent {}", department.getId(), newParentDepartment.getId());
         jpaQueryFactory.update(QDepartment.department)
                 .set(QDepartment.department.rootId, newParentDepartment.getRootId())
                 .where(QDepartment.department.leftIndex.between(department.getLeftIndex(), department.getRightIndex()))
@@ -657,5 +651,79 @@ public class NestedSetDepartmentService implements DepartmentService {
                 .execute();
     }
 
+    /**
+     * Moves a department to the root level.
+     *
+     * @param department the department to be moved to the root level
+     */
+    protected void moveToRoot(Department department) {
+        int subtreeSize = department.getRightIndex() - department.getLeftIndex() + 1;
+        int indexShift = -(department.getLeftIndex() - 1);
+
+        // Log current state
+        log.info("Moving department {} to root. Subtree size: {}, Index shift: {}",
+                department.getId(), subtreeSize, indexShift);
+
+        // Shift indexes to make space for the new root subtree
+        entityManager.flush();
+        shiftIndexesForRoot(subtreeSize);
+        entityManager.refresh(department);
+
+        // Move the subtree to the new root level and update levels
+        entityManager.flush();
+        updateSubtreeIndexesAndLevels(department, indexShift, -department.getLevel());
+        entityManager.refresh(department);
+
+        // Compact the space left by the moved subtree
+        entityManager.flush();
+        compactIndexes(department.getLeftIndex(), subtreeSize);
+        entityManager.refresh(department);
+
+        // Update parent and root IDs of the subtree
+        entityManager.flush();
+        updateSubtreeToRoot(department);
+    }
+
+    /**
+     * Shifts indexes to make space for the new root subtree.
+     *
+     * @param shiftBy the amount to shift by
+     */
+    protected void shiftIndexesForRoot(int shiftBy) {
+
+        log.info("Shifting indexes for root by {}", shiftBy);
+
+        jpaQueryFactory.update(QDepartment.department)
+                .set(QDepartment.department.leftIndex, QDepartment.department.leftIndex.add(shiftBy))
+                .where(QDepartment.department.leftIndex.goe(1))
+                .execute();
+
+        jpaQueryFactory.update(QDepartment.department)
+                .set(QDepartment.department.rightIndex, QDepartment.department.rightIndex.add(shiftBy))
+                .where(QDepartment.department.rightIndex.goe(1))
+                .execute();
+    }
+
+    /**
+     * Updates the parent ID and root ID for a department and its subtree to move it to the root level.
+     *
+     * @param department the department being moved to the root level
+     */
+    protected void updateSubtreeToRoot(Department department) {
+
+        log.info("Updating subtree to root for department {}", department.getId());
+
+        // Update the rootId for all nodes in the subtree to be their own ID
+        jpaQueryFactory.update(QDepartment.department)
+                .set(QDepartment.department.rootId, QDepartment.department.id)
+                .where(QDepartment.department.leftIndex.between(department.getLeftIndex(), department.getRightIndex()))
+                .execute();
+
+        // Update the parentDepartmentId for the department being moved to null
+        jpaQueryFactory.update(QDepartment.department)
+                .set(QDepartment.department.parentDepartmentId, (Long) null)
+                .where(QDepartment.department.id.eq(department.getId()))
+                .execute();
+    }
 
 }

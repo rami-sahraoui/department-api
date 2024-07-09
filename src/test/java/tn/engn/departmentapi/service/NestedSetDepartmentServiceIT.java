@@ -834,7 +834,7 @@ public class NestedSetDepartmentServiceIT extends TestContainerSetup {
     }
 
     /**
-     * Test for deleteDepartment method to ensure it throws DataIntegrityException
+     * Test for delete Department method to ensure it throws DataIntegrityException
      * when trying to delete a department involved in a circular dependency.
      */
     @Test
@@ -930,6 +930,7 @@ public class NestedSetDepartmentServiceIT extends TestContainerSetup {
         assertEquals(updatedName, updatedDepartment.getName());
         assertEquals(engineering.getParentDepartmentId(), updatedDepartment.getParentDepartmentId());
     }
+
     /**
      * Test case for updating a department's name only within a real subtree.
      * Verifies that the department's name is updated correctly.
@@ -1006,11 +1007,7 @@ public class NestedSetDepartmentServiceIT extends TestContainerSetup {
 
         DepartmentResponseDto hr = createDepartment("HR Department", null);
 
-        // When: Change the parent of the Software Department
-        DepartmentRequestDto updatedDto = DepartmentRequestDto.builder()
-                .name(frontendTeam.getName())
-                .parentDepartmentId(engineering.getId())
-                .build();
+        entityManager.flush();
 
         // Fetch updated department from repository to verify indexes
         Department engineeringDeptEntity = departmentRepository.findById(engineering.getId()).orElseThrow();
@@ -1029,12 +1026,13 @@ public class NestedSetDepartmentServiceIT extends TestContainerSetup {
                 )
         );
 
+        // When: Change the parent of the Software Department
+        DepartmentRequestDto updatedDto = DepartmentRequestDto.builder()
+                .name(frontendTeam.getName())
+                .parentDepartmentId(engineering.getId())
+                .build();
+
         DepartmentResponseDto updatedDepartment = departmentService.updateDepartment(frontendTeam.getId(), updatedDto);
-
-        // Then: Verify the department's parent is updated correctly
-        assertEquals(frontendTeam.getName(), updatedDepartment.getName());
-        //assertEquals(engineeringDeptEntity.getId(), updatedDepartment.getParentDepartmentId());
-
 
         refreshEntities(
                 List.of(
@@ -1045,6 +1043,10 @@ public class NestedSetDepartmentServiceIT extends TestContainerSetup {
                         frontendTeamDeptEntity
                 )
         );
+
+        // Then: Verify the department's parent is updated correctly
+        assertEquals(frontendTeam.getName(), updatedDepartment.getName());
+        assertEquals(engineeringDeptEntity.getId(), updatedDepartment.getParentDepartmentId());
 
         // Verify indexes
         assertNestedSetIndexes();
@@ -1060,7 +1062,7 @@ public class NestedSetDepartmentServiceIT extends TestContainerSetup {
     }
 
     /**
-     * Test case for updating a department's parent within a real subtree.
+     * Test case for updating a department's parent within a real subtree (root to child of another root).
      * Verifies that the department's parent is updated and indexes are adjusted correctly.
      */
     @Test
@@ -1073,6 +1075,8 @@ public class NestedSetDepartmentServiceIT extends TestContainerSetup {
         DepartmentResponseDto frontendTeam = createDepartment("Frontend Team", software.getId());
 
         DepartmentResponseDto hr = createDepartment("HR Department", null);
+
+        entityManager.flush();
 
         // Fetch updated department from repository to verify indexes
         Department hrDeptEntity = departmentRepository.findById(hr.getId()).orElseThrow();
@@ -1143,6 +1147,8 @@ public class NestedSetDepartmentServiceIT extends TestContainerSetup {
         // Given: Create initial departments
         DepartmentResponseDto engineering = createDepartment("Engineering Department", null);
         DepartmentResponseDto hr = createDepartment("HR Department", null);
+
+        entityManager.flush();
 
         // Fetch updated department from repository to verify indexes and levels
         Department engineeringDeptEntity = departmentRepository.findById(engineering.getId()).orElseThrow();
@@ -1226,12 +1232,12 @@ public class NestedSetDepartmentServiceIT extends TestContainerSetup {
     }
 
     /**
-     * Test case for updating a department that results in a circular reference.
+     * Test case for updating a department that results in a self-circular reference.
      * Verifies that a DataIntegrityException is thrown.
      */
     @Test
     @Transactional
-    public void testUpdateDepartment_DataIntegrityException() {
+    public void testUpdateDepartment_SelfCircularReferences() {
         // Given: Create initial departments
         DepartmentResponseDto engineering = createDepartment("Engineering Department", null);
         DepartmentResponseDto software = createDepartment("Software Department", engineering.getId());
@@ -1316,6 +1322,81 @@ public class NestedSetDepartmentServiceIT extends TestContainerSetup {
 
         assertNestedSetIndexes(rootDepartment.getId());
     }
+
+    /**
+     * Test case for updating a child department to be a root.
+     * Verifies that the department's parent and indexes are adjusted correctly.
+     */
+    @Test
+    @Transactional
+    public void testUpdateDepartment_ChangeChildToRoot() {
+        // Given: Create initial departments
+        DepartmentResponseDto engineering = createDepartment("Engineering Department", null);
+        DepartmentResponseDto software = createDepartment("Software Department", engineering.getId());
+        DepartmentResponseDto backendTeam = createDepartment("Backend Team", software.getId());
+        DepartmentResponseDto frontendTeam = createDepartment("Frontend Team", software.getId());
+        DepartmentResponseDto hr = createDepartment("HR Department", null);
+
+        entityManager.flush();
+
+        Department engineeringDepartment = departmentRepository.findById(engineering.getId()).orElseThrow();
+        Department softwareDepartment = departmentRepository.findById(software.getId()).orElseThrow();
+        Department hrDepartment = departmentRepository.findById(hr.getId()).orElseThrow();
+        Department backendTeamDepartment = departmentRepository.findById(backendTeam.getId()).orElseThrow();
+        Department frontendTeamDepartment = departmentRepository.findById(frontendTeam.getId()).orElseThrow();
+
+        refreshEntities(
+                List.of(
+                        engineeringDepartment,
+                        softwareDepartment,
+                        hrDepartment,
+                        backendTeamDepartment,
+                        frontendTeamDepartment
+                )
+        );
+
+        // When: Change the parent of the Software Department to root
+        DepartmentRequestDto updatedDto = DepartmentRequestDto.builder()
+                .name(software.getName())
+                .parentDepartmentId(null)
+                .build();
+
+        DepartmentResponseDto updatedDepartment = departmentService.updateDepartment(software.getId(), updatedDto);
+
+        // Fetch updated department from repository to verify indexes
+        Department updatedDeptEntity = departmentRepository.findById(updatedDepartment.getId()).orElseThrow();
+
+        refreshEntities(
+                List.of(
+                        engineeringDepartment,
+                        hrDepartment,
+                        backendTeamDepartment,
+                        frontendTeamDepartment,
+
+                        updatedDeptEntity
+                )
+        );
+
+        // Then: Verify the department's parent is updated to root correctly
+        assertEquals(software.getName(), updatedDepartment.getName());
+        assertNull(updatedDepartment.getParentDepartmentId());
+
+        assertEquals(0, updatedDeptEntity.getLevel());
+        assertIndexesForRoot(updatedDeptEntity);
+        assertNestedSetIndexes();
+    }
+
+    /**
+     * Verifies that the indexes for a root department are correct.
+     *
+     * @param department the department to verify
+     */
+    private void assertIndexesForRoot(Department department) {
+        // Root department should have leftIndex = 1 and rightIndex = size of the subtree
+        assertEquals(1, department.getLeftIndex());
+        assertEquals(department.getRightIndex() - department.getLeftIndex() + 1, department.getRightIndex());
+    }
+
 
     /**
      * Helper method to assert the nested set indexes of a department.
@@ -1587,8 +1668,6 @@ public class NestedSetDepartmentServiceIT extends TestContainerSetup {
      */
     @Transactional
     protected void refreshEntities(List<Department> departments) {
-        for (Department department : departments) {
-            entityManager.refresh(department);
-        }
+        departments.forEach(entityManager::refresh);
     }
 }
