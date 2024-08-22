@@ -18,13 +18,9 @@ import java.util.Objects;
 @SuperBuilder
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true) // Only include explicitly included fields
-//@Entity
-@Entity(name = "hierarchy_entities")
+@Entity
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
-@DiscriminatorColumn(name = "entity_type", discriminatorType = DiscriminatorType.STRING)
-
-//@Table(name = "hierarchy_base_entities")
-public class HierarchyBaseEntity<E extends HierarchyBaseEntity<E>> {
+public abstract class HierarchyBaseEntity<E extends HierarchyBaseEntity<E>> {
 
     /**
      * The unique identifier of the hierarchical entity.
@@ -61,60 +57,42 @@ public class HierarchyBaseEntity<E extends HierarchyBaseEntity<E>> {
      *
      * @return The parent entity.
      */
-    public E getParentEntity() {
-        // This will be overridden in the subclasses
-        throw new UnsupportedOperationException("This method should be overridden in the subclass.");
-    }
+    public abstract E getParentEntity();
 
     /**
      * Sets the parent entity of this hierarchical entity.
      *
      * @param parentEntity The parent entity to set.
      */
-    public void setParentEntity(E parentEntity) {
-        // This will be overridden in the subclasses
-        throw new UnsupportedOperationException("This method should be overridden in the subclass.");
-    }
+    public abstract void setParentEntity(E parentEntity);
 
     /**
      * Retrieves the list of sub-entities (children) of this hierarchical entity.
      *
      * @return The list of sub-entities.
      */
-    public List<E> getSubEntities() {
-        // This will be overridden in the subclasses
-        throw new UnsupportedOperationException("This method should be overridden in the subclass.");
-    }
+    public abstract List<E> getSubEntities();
 
     /**
      * Sets the list of sub-entities (children) of this hierarchical entity.
      *
      * @param subEntities The list of sub-entities to set.
      */
-    public void setSubEntities(List<E> subEntities) {
-        // This will be overridden in the subclasses
-        throw new UnsupportedOperationException("This method should be overridden in the subclass.");
-    }
+    public abstract void setSubEntities(List<E> subEntities);
 
     /**
      * Adds a sub-entity to this hierarchical entity.
      *
      * @param subEntity The sub-entity to add.
      */
-    public void addSubEntity(E subEntity) {
-        // This will be overridden in the subclasses
-        throw new UnsupportedOperationException("This method should be overridden in the subclass.");
-    }
+    public abstract void addSubEntity(E subEntity);
 
     /**
      * Removes a sub-entity from this hierarchical entity.
      *
      * @param subEntity The sub-entity to remove.
      */
-    public void removeSubEntity(E subEntity) {
-        // This will be overridden in the subclasses
-        throw new UnsupportedOperationException("This method should be overridden in the subclass.");
-    }
+    public abstract void removeSubEntity(E subEntity);
 
     @Override
     public boolean equals(Object o) {

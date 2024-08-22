@@ -3,24 +3,20 @@ package tn.engn.hierarchicalentityapi.model;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import tn.engn.employeeapi.model.Employee;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Represents a department entity in the system.
  */
 @Getter
 @Setter
+@EqualsAndHashCode(callSuper = true) // Include fields from the superclass
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
 @Entity
-@DiscriminatorValue("Department")
-
-//@Table(name = "departments")
-@EqualsAndHashCode(callSuper = true) // Include fields from the superclass
 public class Department extends HierarchyBaseEntity<Department> {
 
     /**
@@ -36,6 +32,12 @@ public class Department extends HierarchyBaseEntity<Department> {
     @Builder.Default
     @OneToMany(mappedBy = "parentEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<Department> subEntities = new ArrayList<>();
+
+    /**
+     * The set of employees assigned to the department.
+     */
+    @ManyToMany(mappedBy = "departments", fetch = FetchType.EAGER)
+    private Set<Employee> employees = new HashSet<>();
 
     /**
      * Adds a sub-department to this department entity.
@@ -59,6 +61,26 @@ public class Department extends HierarchyBaseEntity<Department> {
         subEntities.remove(subEntity);
         subEntity.setParentId(null);
         subEntity.setParentEntity(null); // Remove bidirectional relationship
+    }
+
+    /**
+     * Adds an employee to the department.
+     *
+     * @param employee the employee to add
+     */
+    public void addEmployee(Employee employee) {
+        employees.add(employee);
+        employee.getDepartments().add(this);
+    }
+
+    /**
+     * Removes an employee from the department.
+     *
+     * @param employee the employee to remove
+     */
+    public void removeEmployee(Employee employee) {
+        employees.remove(employee);
+        employee.getDepartments().remove(this);
     }
 
     @Override

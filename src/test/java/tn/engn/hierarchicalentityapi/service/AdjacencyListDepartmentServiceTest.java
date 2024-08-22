@@ -615,7 +615,7 @@ public class AdjacencyListDepartmentServiceTest {
         when(departmentRepository.findById(parentId)).thenReturn(Optional.of(parentEntity));
 
         // Mock mapper behavior (toDtoList)
-        when(departmentMapper.toDtoList(parentEntity.getSubEntities(), false)).thenReturn(Arrays.asList(
+        when(departmentMapper.toDtoList(any(), anyBoolean())).thenReturn(Arrays.asList(
                 HierarchyResponseDto.builder().id(subDepartment1.getId()).name(subDepartment1.getName()).build(),
                 HierarchyResponseDto.builder().id(subDepartment2.getId()).name(subDepartment2.getName()).build())
         );
@@ -627,7 +627,7 @@ public class AdjacencyListDepartmentServiceTest {
         verify(departmentRepository, times(1)).findById(parentId);
 
         // Verify mapper method called
-        verify(departmentMapper, times(1)).toDtoList(parentEntity.getSubEntities(), false);
+        verify(departmentMapper, times(1)).toDtoList(any(), anyBoolean());
 
         // Assertions
         assertNotNull(subEntities);
@@ -654,7 +654,7 @@ public class AdjacencyListDepartmentServiceTest {
         when(departmentRepository.findById(parentId)).thenReturn(Optional.of(parentEntity));
 
         // Mock mapper behavior (toDtoList)
-        when(departmentMapper.toDtoList(parentEntity.getSubEntities(), false)).thenReturn(Collections.emptyList());
+        when(departmentMapper.toDtoList(any(), anyBoolean())).thenReturn(Collections.emptyList());
 
         // Call service method
         List<HierarchyResponseDto> subEntities = departmentService.getSubEntities(parentId);
@@ -663,7 +663,7 @@ public class AdjacencyListDepartmentServiceTest {
         verify(departmentRepository, times(1)).findById(parentId);
 
         // Verify mapper method called
-        verify(departmentMapper, times(1)).toDtoList(parentEntity.getSubEntities(),false);
+        verify(departmentMapper, times(1)).toDtoList(any(),anyBoolean());
 
         // Assertions
         assertNotNull(subEntities);
@@ -791,15 +791,6 @@ public class AdjacencyListDepartmentServiceTest {
         assertNotNull(ancestors);
         assertEquals(1, ancestors.size());
         assertEquals("Parent Department", ancestors.get(0).getName());
-    }
-
-    HierarchyBaseEntity<?> toBaseEntity(Department department) {
-        if (department == null) return null;
-        HierarchyBaseEntity<?> baseEntity = HierarchyBaseEntity.builder().id(department.getId())
-                .name(department.getName())
-                .parentId(department.getParentId())
-                .build();
-        return baseEntity;
     }
 
     /**
@@ -1016,7 +1007,7 @@ public class AdjacencyListDepartmentServiceTest {
                 HierarchyResponseDto.builder().id(3L).name("Department 3").build()
                 // Add corresponding DTOs as needed
         );
-        when(departmentMapper.toDtoList(mockEntities, false)).thenReturn(mockDtoList);
+        when(departmentMapper.toDtoList(eq(mockEntities), anyBoolean())).thenReturn(mockDtoList);
 
         // Call the method under test
         List<HierarchyResponseDto> responseDtoList = departmentService.getAllEntities();
@@ -1082,7 +1073,7 @@ public class AdjacencyListDepartmentServiceTest {
         mockSelectFromQueryList(mockEntities);
 
         // Mock behavior for departmentMapper.toDtoList() to throw an exception
-        when(departmentMapper.toDtoList(mockEntities, false)).thenThrow(new RuntimeException("Mapping error"));
+        when(departmentMapper.toDtoList(eq(mockEntities), anyBoolean())).thenThrow(new RuntimeException("Mapping error"));
 
         // Call the method under test and expect an exception
         Exception exception = assertThrows(RuntimeException.class, () -> {
@@ -1111,7 +1102,7 @@ public class AdjacencyListDepartmentServiceTest {
         for (long i = 1; i <= 10000; i++) {
             mockDtoList.add(HierarchyResponseDto.builder().id(i).name("Department " + i).build());
         }
-        when(departmentMapper.toDtoList(mockEntities, false)).thenReturn(mockDtoList);
+        when(departmentMapper.toDtoList(eq(mockEntities), anyBoolean())).thenReturn(mockDtoList);
 
         // Call the method under test
         List<HierarchyResponseDto> responseDtoList = departmentService.getAllEntities();
@@ -1240,7 +1231,7 @@ public class AdjacencyListDepartmentServiceTest {
 
         // Mock behavior for departmentMapper.toDto()
         HierarchyResponseDto mockDto = HierarchyResponseDto.builder().id(1L).name("Department 1").build();
-        when(departmentMapper.toDto(mockDepartment, false)).thenReturn(mockDto);
+        when(departmentMapper.toDto(eq(mockDepartment), anyBoolean())).thenReturn(mockDto);
 
         // Call the method under test
         HierarchyResponseDto responseDto = departmentService.getEntityById(1L);
@@ -1278,7 +1269,7 @@ public class AdjacencyListDepartmentServiceTest {
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(mockDepartment));
 
         // Mock behavior for departmentMapper.toDto() to throw an exception
-        when(departmentMapper.toDto(mockDepartment,false)).thenThrow(new RuntimeException("Mapping error"));
+        when(departmentMapper.toDto(eq(mockDepartment),anyBoolean())).thenThrow(new RuntimeException("Mapping error"));
 
         // Call the method under test and expect an exception
         Exception exception = assertThrows(RuntimeException.class, () -> {

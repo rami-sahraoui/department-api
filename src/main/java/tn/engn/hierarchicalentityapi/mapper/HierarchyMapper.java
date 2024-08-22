@@ -1,5 +1,6 @@
 package tn.engn.hierarchicalentityapi.mapper;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import tn.engn.hierarchicalentityapi.dto.HierarchyRequestDto;
 import tn.engn.hierarchicalentityapi.dto.HierarchyResponseDto;
@@ -70,6 +71,8 @@ public interface HierarchyMapper<E extends HierarchyBaseEntity, RD extends Hiera
      */
     PaginatedResponseDto<SD> toPaginatedDtoList(List<E> entities, Pageable pageable, long totalElements, boolean fetchSubEntities);
 
+    PaginatedResponseDto<SD> toDtoPage(Page<E> page);
+
     /**
      * Sets the sub-entities for a response DTO.
      *
@@ -77,6 +80,15 @@ public interface HierarchyMapper<E extends HierarchyBaseEntity, RD extends Hiera
      * @param entity      the entity
      */
     void setSubEntities(SD responseDto, E entity);
+
+    /**
+     * Sets sub-entities (children) in the response DTO with an option to fetch sub-entities.
+     *
+     * @param responseDto      the response DTO to populate with sub-entities
+     * @param entity           the entity from which to fetch sub-entities
+     * @param fetchSubEntities flag indicating whether to fetch sub-entities
+     */
+     void setSubEntities(SD responseDto, E entity, boolean fetchSubEntities);
 
     /**
      * Casts a HierarchyBaseEntity to the specific type E.

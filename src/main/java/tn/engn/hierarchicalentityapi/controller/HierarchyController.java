@@ -38,7 +38,6 @@ import java.util.List;
 @Getter
 @Setter
 @Slf4j
-@Tag(name = "Hierarchy Management", description = "Endpoints for managing hierarchical entities using dynamic version and plural names.")
 public class HierarchyController<E extends HierarchyBaseEntity, RD extends HierarchyRequestDto, SD extends HierarchyResponseDto> {
 
     private final HierarchyService<E, RD, SD> hierarchyService;

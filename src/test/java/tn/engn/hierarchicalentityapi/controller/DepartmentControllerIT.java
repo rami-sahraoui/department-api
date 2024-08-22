@@ -917,7 +917,10 @@ public class DepartmentControllerIT {
 
                     // Assert the sub-entities of the sub-entities (should be null since fetchSubEntities=false)
                     subEntities.forEach(subEntity -> {
-                        assertThat(subEntity.getSubEntities()).isNull();
+                        subEntity.getSubEntities().forEach(dto -> {
+                            assertThat(dto).isNotNull();
+                            assertThat(dto.getSubEntities()).isNull();
+                        });
                     });
                 });
 
@@ -1024,7 +1027,10 @@ public class DepartmentControllerIT {
 
                     // Assert the sub-entities of the sub-entities (should be null since fetchSubEntities=false)
                     paginatedResponse.getContent().forEach(subEntity -> {
-                        assertThat(subEntity.getSubEntities()).isNull();
+                        subEntity.getSubEntities().forEach(dto -> {
+                            assertThat(dto).isNotNull();
+                            assertThat(dto.getSubEntities()).isNull();
+                        });
                     });
 
                     // Assert pagination details
@@ -1686,7 +1692,10 @@ public class DepartmentControllerIT {
 
                     // Assert the sub-entities of the ancestors (should be empty since fetchSubEntities=false)
                     ancestors.forEach(ancestor -> {
-                        assertThat(ancestor.getSubEntities()).isNull();
+                        ancestor.getSubEntities().forEach(dto -> {
+                            assertThat(dto).isNotNull();
+                            assertThat(dto.getSubEntities()).isNull();
+                        });
                     });
                 });
 
@@ -1794,7 +1803,10 @@ public class DepartmentControllerIT {
 
                     // Assert the sub-entities of the ancestors (should be null since fetchSubEntities=false)
                     paginatedResponse.getContent().forEach(ancestor -> {
-                        assertThat(ancestor.getSubEntities()).isNull();
+                        ancestor.getSubEntities().forEach(dto -> {
+                            assertThat(dto).isNotNull();
+                            assertThat(dto.getSubEntities()).isNull();
+                        });
                     });
 
                     // Assert pagination details

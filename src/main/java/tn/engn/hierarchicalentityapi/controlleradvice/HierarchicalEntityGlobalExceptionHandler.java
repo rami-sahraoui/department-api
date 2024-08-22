@@ -1,5 +1,6 @@
 package tn.engn.hierarchicalentityapi.controlleradvice;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -13,7 +14,8 @@ import java.time.LocalDateTime;
  * A global exception handler to catch and handle exceptions throughout the application.
  */
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+@Slf4j
+public class HierarchicalEntityGlobalExceptionHandler {
 
     /**
      * Handles ValidationException and returns a structured error response.
@@ -83,6 +85,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        log.error("{}: {}\n{}",ex.getClass(), ex.getMessage(),ex.getStackTrace());
         ErrorResponse errorResponse = new ErrorResponse("An unexpected error occurred.", HttpStatus.INTERNAL_SERVER_ERROR.value(), LocalDateTime.now());
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }

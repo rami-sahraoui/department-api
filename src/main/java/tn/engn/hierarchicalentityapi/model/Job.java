@@ -3,23 +3,20 @@ package tn.engn.hierarchicalentityapi.model;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import tn.engn.employeeapi.model.Employee;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Represents a job entity in the system.
  */
 @Getter
 @Setter
+@EqualsAndHashCode(callSuper = true) // Include fields from the superclass
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
 @Entity
-@DiscriminatorValue("Job")
-@Table(name = "jobs")
-@EqualsAndHashCode(callSuper = true) // Include fields from the superclass
 public class Job extends HierarchyBaseEntity<Job> {
 
     /**
@@ -35,6 +32,12 @@ public class Job extends HierarchyBaseEntity<Job> {
     @Builder.Default
     @OneToMany(mappedBy = "parentEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<Job> subEntities = new ArrayList<>();
+
+    /**
+     * The set of employees assigned to the job.
+     */
+    @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private Set<Employee> employees = new HashSet<>();
 
     /**
      * Adds a sub-job to this job entity.
@@ -58,6 +61,26 @@ public class Job extends HierarchyBaseEntity<Job> {
         subEntities.remove(subEntity);
         subEntity.setParentId(null);
         subEntity.setParentEntity(null); // Remove bidirectional relationship
+    }
+
+    /**
+     * Adds an employee to the job.
+     *
+     * @param employee the employee to add
+     */
+    public void addEmployee(Employee employee) {
+        employees.add(employee);
+        employee.setJob(this);
+    }
+
+    /**
+     * Removes an employee from the job.
+     *
+     * @param employee the employee to remove
+     */
+    public void removeEmployee(Employee employee) {
+        employees.remove(employee);
+        employee.setJob(null);
     }
 
     @Override
