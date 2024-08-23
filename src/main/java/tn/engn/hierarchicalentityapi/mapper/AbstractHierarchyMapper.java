@@ -1,7 +1,9 @@
 package tn.engn.hierarchicalentityapi.mapper;
 
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import tn.engn.hierarchicalentityapi.dto.HierarchyRequestDto;
 import tn.engn.hierarchicalentityapi.dto.HierarchyResponseDto;
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
  * @param <RD> the request DTO type used for creating or updating the entity
  * @param <SD> the response DTO type used for retrieving the entity
  */
+@Slf4j
 public abstract class AbstractHierarchyMapper<E extends HierarchyBaseEntity<E>, RD extends HierarchyRequestDto, SD extends HierarchyResponseDto>
         implements HierarchyMapper<E, RD, SD> {
 
@@ -132,6 +135,29 @@ public abstract class AbstractHierarchyMapper<E extends HierarchyBaseEntity<E>, 
                 .size(pageable.getPageSize())
                 .totalElements(totalElements)
                 .totalPages((int) Math.ceil((double) totalElements / pageable.getPageSize()))
+                .build();
+    }
+
+    /**
+     * Converts a Page of entities to PaginatedResponseDto containing a list of DTOs.
+     *
+     * @param page the Page of entities
+     * @return the PaginatedResponseDto containing the list of DTOs
+     */
+    @Override
+    public PaginatedResponseDto<SD> toDtoPage(Page<E> page) {
+        if (page == null) {
+            return null;
+        }
+
+        List<SD> content = toDtoList(page.getContent());
+
+        return PaginatedResponseDto.<SD>builder()
+                .content(content)
+                .page(page.getNumber())
+                .size(page.getSize())
+                .totalElements(page.getTotalElements())
+                .totalPages(page.getTotalPages())
                 .build();
     }
 

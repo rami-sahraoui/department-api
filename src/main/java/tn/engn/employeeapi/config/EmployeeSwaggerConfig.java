@@ -1,32 +1,32 @@
-package tn.engn.hierarchicalentityapi.config;
+package tn.engn.employeeapi.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.tags.Tag;
 import org.springdoc.core.models.GroupedOpenApi;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class SwaggerConfig {
+public class EmployeeSwaggerConfig {
 
     @Bean
-    public OpenAPI customOpenAPI() {
+    @Qualifier("employeeOpenAPI")
+    public OpenAPI employeeOpenAPI() {
         return new OpenAPI()
                 .info(
                         new Info()
-                                .title("Hierarchy API")
+                                .title("Employee API")
                                 .version("1.0")
-                                .description("Endpoints for managing hierarchical entities with a dynamic sub-entities path.")
+                                .description("Endpoints for managing Employees.")
                 );
     }
 
     @Bean
-    public GroupedOpenApi publicApi() {
+    public GroupedOpenApi employeeApi() {
         return GroupedOpenApi.builder()
-                .group("hierarchy")
-                .packagesToScan("tn.engn.hierarchicalentityapi")
+                .group("employee")
+                .packagesToScan("tn.engn.employeeapi")
                 .build();
     }
 }
-

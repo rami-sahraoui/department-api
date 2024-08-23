@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.Valid;
 import lombok.Getter;
@@ -38,7 +37,6 @@ import java.util.List;
 @Getter
 @Setter
 @Slf4j
-//@Tag(name = "Hierarchy Management", description = "Endpoints for managing hierarchical entities using dynamic version and plural names.")
 public class HierarchyController<E extends HierarchyBaseEntity, RD extends HierarchyRequestDto, SD extends HierarchyResponseDto> {
 
     private final HierarchyService<E, RD, SD> hierarchyService;

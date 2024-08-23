@@ -1,5 +1,6 @@
 package tn.engn.hierarchicalentityapi.controlleradvice;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -13,7 +14,8 @@ import java.time.LocalDateTime;
  * A global exception handler to catch and handle exceptions throughout the application.
  */
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+@Slf4j
+public class HierarchicalEntityGlobalExceptionHandler {
 
     /**
      * Handles ValidationException and returns a structured error response.
@@ -28,13 +30,13 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handles ParentEntityNotFoundException and returns a structured error response.
+     * Handles ParentDepartmentNotFoundException and returns a structured error response.
      *
-     * @param ex the ParentEntityNotFoundException.
+     * @param ex the ParentDepartmentNotFoundException.
      * @return the ErrorResponse with HTTP status 404 (Not Found).
      */
     @ExceptionHandler(ParentEntityNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleParentEntityNotFoundException(ParentEntityNotFoundException ex) {
+    public ResponseEntity<ErrorResponse> handleParentDepartmentNotFoundException(ParentEntityNotFoundException ex) {
         ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), HttpStatus.NOT_FOUND.value(), LocalDateTime.now());
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
@@ -52,13 +54,13 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handles EntityNotFoundException and returns a structured error response.
+     * Handles DepartmentNotFoundException and returns a structured error response.
      *
-     * @param ex the EntityNotFoundException.
+     * @param ex the DepartmentNotFoundException.
      * @return the ErrorResponse with HTTP status 404 (Not Found).
      */
     @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException ex) {
+    public ResponseEntity<ErrorResponse> handleDepartmentNotFoundException(EntityNotFoundException ex) {
         ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), HttpStatus.NOT_FOUND.value(), LocalDateTime.now());
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
@@ -83,6 +85,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        log.error("{}: {}\n{}",ex.getClass(), ex.getMessage(),ex.getStackTrace());
         ErrorResponse errorResponse = new ErrorResponse("An unexpected error occurred.", HttpStatus.INTERNAL_SERVER_ERROR.value(), LocalDateTime.now());
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }

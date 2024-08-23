@@ -2,10 +2,7 @@ package tn.engn.hierarchicalentityapi.model;
 
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 /**
@@ -14,10 +11,9 @@ import lombok.experimental.SuperBuilder;
  */
 @Getter
 @Setter
-@NoArgsConstructor
+@AllArgsConstructor
 @SuperBuilder
 @Entity
-@DiscriminatorValue("Job Closure")
 @EqualsAndHashCode(callSuper = true) // Include fields from the superclass
 public class JobClosure extends HierarchyBaseEntityClosure<JobClosure> {
 

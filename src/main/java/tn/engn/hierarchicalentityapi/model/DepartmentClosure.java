@@ -10,10 +10,9 @@ import lombok.experimental.SuperBuilder;
  */
 @Getter
 @Setter
-@NoArgsConstructor
+@AllArgsConstructor
 @SuperBuilder
 @Entity
-@DiscriminatorValue("Department Closure")
 @EqualsAndHashCode(callSuper = true) // Include fields from the superclass
 public class DepartmentClosure extends HierarchyBaseEntityClosure<DepartmentClosure> {
 

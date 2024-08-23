@@ -3,6 +3,10 @@ package tn.engn.hierarchicalentityapi.model;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import tn.engn.employeeapi.model.Employee;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Represents a department entity in the Closure Table Model with support for hierarchical structures.
@@ -10,11 +14,37 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 @SuperBuilder
 @Entity
-@DiscriminatorValue("Department")
 @EqualsAndHashCode(callSuper = true) // Include fields from the superclass
 public class Department extends HierarchyBaseEntity<Department> {
+
+    /**
+     * The set of employees assigned to the department.
+     */
+    @ManyToMany(mappedBy = "departments", fetch = FetchType.EAGER)
+    private Set<Employee> employees = new HashSet<>();
+
+    /**
+     * Adds an employee to the department.
+     *
+     * @param employee the employee to add
+     */
+    public void addEmployee(Employee employee) {
+        employees.add(employee);
+        employee.getDepartments().add(this);
+    }
+
+    /**
+     * Removes an employee from the department.
+     *
+     * @param employee the employee to remove
+     */
+    public void removeEmployee(Employee employee) {
+        employees.remove(employee);
+        employee.getDepartments().remove(this);
+    }
 
     /**
      * Override method to return the entity type class.

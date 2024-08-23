@@ -17,7 +17,7 @@ import tn.engn.hierarchicalentityapi.repository.HierarchyBaseRepository;
  */
 @Service
 @Slf4j
-public class ClosureTableJobService extends ClosureTableEntityService<Job, JobClosure, HierarchyRequestDto, HierarchyResponseDto> {
+public class ClosureTableJobService extends ClosureTableEntityService<Job, JobClosure, HierarchyRequestDto, HierarchyResponseDto> implements JobService{
     /**
      * Constructor for ClosureTableEntityService.
      *

@@ -15,14 +15,11 @@ import java.util.Objects;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 @SuperBuilder
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true) // Only include explicitly included fields
-@Entity(name = "hierarchy_entities_closures")
+@Entity
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
-@DiscriminatorColumn(name = "entity_type", discriminatorType = DiscriminatorType.STRING)
-
 public class HierarchyBaseEntityClosure<C extends HierarchyBaseEntityClosure<C>> {
 
     /**
