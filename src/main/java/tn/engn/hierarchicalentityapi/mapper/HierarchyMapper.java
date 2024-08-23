@@ -1,5 +1,6 @@
 package tn.engn.hierarchicalentityapi.mapper;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import tn.engn.hierarchicalentityapi.dto.HierarchyRequestDto;
 import tn.engn.hierarchicalentityapi.dto.HierarchyResponseDto;
@@ -69,6 +70,8 @@ public interface HierarchyMapper<E extends HierarchyBaseEntity, RD extends Hiera
      * @return the paginated response DTO
      */
     PaginatedResponseDto<SD> toPaginatedDtoList(List<E> entities, Pageable pageable, long totalElements, boolean fetchSubEntities);
+
+    PaginatedResponseDto<SD> toDtoPage(Page<E> page);
 
     /**
      * Sets the sub-entities for a response DTO.
