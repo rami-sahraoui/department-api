@@ -1,12 +1,12 @@
 package tn.engn.hierarchicalentityapi.model;
 
-import jakarta.persistence.DiscriminatorValue;
-import jakarta.persistence.Entity;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
+import tn.engn.employeeapi.model.Employee;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Represents a department entity in the Materialized Path Model with support for hierarchical structures.
@@ -14,11 +14,17 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 @SuperBuilder
 @Entity
-@DiscriminatorValue("Job")
 @EqualsAndHashCode(callSuper = true) // Include fields from the superclass
 public class Job extends HierarchyBaseEntity<Job> {
+
+    /**
+     * The set of employees assigned to the job.
+     */
+    @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private Set<Employee> employees = new HashSet<>();
 
     /**
      * Override method to return the entity type class.
@@ -26,6 +32,26 @@ public class Job extends HierarchyBaseEntity<Job> {
     @Override
     public Class<Job> getEntityType() {
         return Job.class;
+    }
+
+    /**
+     * Adds an employee to the job.
+     *
+     * @param employee the employee to add
+     */
+    public void addEmployee(Employee employee) {
+        employees.add(employee);
+        employee.setJob(this);
+    }
+
+    /**
+     * Removes an employee from the job.
+     *
+     * @param employee the employee to remove
+     */
+    public void removeEmployee(Employee employee) {
+        employees.remove(employee);
+        employee.setJob(null);
     }
 
     @Override

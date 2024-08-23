@@ -14,7 +14,7 @@ import tn.engn.hierarchicalentityapi.repository.HierarchyBaseRepository;
  */
 @Service
 @Slf4j
-public class MaterializedPathDepartmentService extends MaterializedPathEntityService<Department, HierarchyRequestDto, HierarchyResponseDto>{
+public class MaterializedPathDepartmentService extends MaterializedPathEntityService<Department, HierarchyRequestDto, HierarchyResponseDto> implements DepartmentService{
     /**
      * Constructor for MaterializedPathEntityService.
      *
