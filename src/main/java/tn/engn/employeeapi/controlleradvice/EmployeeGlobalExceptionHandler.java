@@ -8,8 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import tn.engn.employeeapi.dto.ErrorResponse;
 import tn.engn.employeeapi.exception.EmployeeNotFoundException;
+import tn.engn.hierarchicalentityapi.exception.ErrorResponse;
 
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;

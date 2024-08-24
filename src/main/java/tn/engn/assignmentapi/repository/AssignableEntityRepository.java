@@ -11,7 +11,6 @@ import tn.engn.assignmentapi.model.AssignableEntity;
  *
  * @param <E> the type of assignable entity
  */
-//@NoRepositoryBean
 @NoRepositoryBean
 public interface AssignableEntityRepository<E extends AssignableEntity>
         extends JpaRepository<E, Long>, QuerydslPredicateExecutor<E> {

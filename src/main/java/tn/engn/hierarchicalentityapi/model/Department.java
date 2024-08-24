@@ -1,6 +1,8 @@
 package tn.engn.hierarchicalentityapi.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ManyToMany;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import tn.engn.employeeapi.model.Employee;

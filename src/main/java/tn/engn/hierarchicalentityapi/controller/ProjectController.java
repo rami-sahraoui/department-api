@@ -1,7 +1,8 @@
 package tn.engn.hierarchicalentityapi.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import tn.engn.hierarchicalentityapi.dto.HierarchyRequestDto;
 import tn.engn.hierarchicalentityapi.dto.HierarchyResponseDto;
 import tn.engn.hierarchicalentityapi.model.Project;

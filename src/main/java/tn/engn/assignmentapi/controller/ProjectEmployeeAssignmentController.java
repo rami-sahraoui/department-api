@@ -1,15 +1,8 @@
 package tn.engn.assignmentapi.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import tn.engn.assignmentapi.dto.AssignmentMetadataRequestDto;
-import tn.engn.assignmentapi.dto.AssignmentResponseDto;
-import tn.engn.assignmentapi.dto.BulkAssignmentToHierarchicalEntityRequestDto;
-import tn.engn.assignmentapi.dto.BulkAssignmentResponseDto;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import tn.engn.assignmentapi.model.ProjectEmployeeAssignment;
 import tn.engn.assignmentapi.service.ProjectEmployeeAssignmentService;
 import tn.engn.employeeapi.dto.EmployeeRequestDto;
@@ -17,10 +10,7 @@ import tn.engn.employeeapi.dto.EmployeeResponseDto;
 import tn.engn.employeeapi.model.Employee;
 import tn.engn.hierarchicalentityapi.dto.HierarchyRequestDto;
 import tn.engn.hierarchicalentityapi.dto.HierarchyResponseDto;
-import tn.engn.hierarchicalentityapi.dto.PaginatedResponseDto;
 import tn.engn.hierarchicalentityapi.model.Project;
-
-import java.util.List;
 
 /**
  * Controller for managing assignments between projects and employees.

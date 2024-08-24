@@ -10,7 +10,6 @@ import tn.engn.assignmentapi.model.AssignableEntity;
 import tn.engn.assignmentapi.model.Assignment;
 import tn.engn.hierarchicalentityapi.model.HierarchyBaseEntity;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
