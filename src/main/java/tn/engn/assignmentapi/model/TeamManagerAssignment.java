@@ -2,7 +2,6 @@ package tn.engn.assignmentapi.model;
 
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
-import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import tn.engn.employeeapi.model.Employee;

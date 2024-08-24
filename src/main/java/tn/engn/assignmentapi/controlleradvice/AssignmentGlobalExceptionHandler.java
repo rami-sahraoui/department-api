@@ -15,7 +15,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import tn.engn.assignmentapi.exception.AssignmentAlreadyExistsException;
 import tn.engn.assignmentapi.exception.AssignmentNotFoundException;
 import tn.engn.assignmentapi.exception.MetadataNotFoundException;
-import tn.engn.employeeapi.dto.ErrorResponse;
+import tn.engn.hierarchicalentityapi.exception.ErrorResponse;
 
 import java.time.LocalDateTime;
 

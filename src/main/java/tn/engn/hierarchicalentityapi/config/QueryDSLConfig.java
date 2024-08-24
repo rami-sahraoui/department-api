@@ -2,11 +2,10 @@ package tn.engn.hierarchicalentityapi.config;
 
 import com.querydsl.core.types.dsl.EntityPathBase;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import tn.engn.hierarchicalentityapi.model.Department;
 import tn.engn.hierarchicalentityapi.model.Job;
 
