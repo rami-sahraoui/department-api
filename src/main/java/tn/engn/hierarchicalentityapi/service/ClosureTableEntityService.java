@@ -22,7 +22,9 @@ import tn.engn.hierarchicalentityapi.exception.ParentEntityNotFoundException;
 import tn.engn.hierarchicalentityapi.exception.ValidationException;
 import tn.engn.hierarchicalentityapi.factory.HierarchyClosureFactory;
 import tn.engn.hierarchicalentityapi.mapper.HierarchyMapper;
-import tn.engn.hierarchicalentityapi.model.*;
+import tn.engn.hierarchicalentityapi.model.HierarchyBaseEntity;
+import tn.engn.hierarchicalentityapi.model.HierarchyBaseEntityClosure;
+import tn.engn.hierarchicalentityapi.model.QHierarchyBaseEntity;
 import tn.engn.hierarchicalentityapi.repository.HierarchyBaseClosureRepository;
 import tn.engn.hierarchicalentityapi.repository.HierarchyBaseRepository;
 

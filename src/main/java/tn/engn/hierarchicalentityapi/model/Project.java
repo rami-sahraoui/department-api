@@ -1,11 +1,13 @@
 package tn.engn.hierarchicalentityapi.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.OneToOne;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import tn.engn.employeeapi.model.Employee;
 
-import java.util.*;
+import java.util.Objects;
 
 /**
  * Represents a project entity in the system.

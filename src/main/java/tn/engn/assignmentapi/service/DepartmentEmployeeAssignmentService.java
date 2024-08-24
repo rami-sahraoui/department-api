@@ -17,9 +17,6 @@ import tn.engn.hierarchicalentityapi.mapper.HierarchyMapper;
 import tn.engn.hierarchicalentityapi.model.Department;
 import tn.engn.hierarchicalentityapi.repository.HierarchyBaseRepository;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Service for managing assignments between departments and employees.
  * Extends {@link BaseAssignmentService} to provide specific functionality for handling
@@ -51,8 +48,7 @@ public class DepartmentEmployeeAssignmentService extends BaseAssignmentService<D
      */
     @Override
     protected void addEntityToHierarchicalEntity(Department department, Employee employee) {
-        department.getEmployees().add(employee);
-        employee.getDepartments().add(department);
+        department.addEmployee(employee);
     }
 
     /**
@@ -64,8 +60,7 @@ public class DepartmentEmployeeAssignmentService extends BaseAssignmentService<D
      */
     @Override
     protected void removeEntityFromHierarchicalEntity(Department department, Employee employee) {
-        department.getEmployees().remove(employee);
-        employee.getDepartments().remove(department);
+        department.removeEmployee(employee);
     }
 
     /**
