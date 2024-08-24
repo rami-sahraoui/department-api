@@ -2,7 +2,10 @@ package tn.engn.assignmentapi.mapper;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import tn.engn.assignmentapi.dto.*;
+import tn.engn.assignmentapi.dto.AssignableEntityRequestDto;
+import tn.engn.assignmentapi.dto.AssignableEntityResponseDto;
+import tn.engn.assignmentapi.dto.AssignmentRequestDto;
+import tn.engn.assignmentapi.dto.AssignmentResponseDto;
 import tn.engn.assignmentapi.model.AssignableEntity;
 import tn.engn.assignmentapi.model.Assignment;
 import tn.engn.hierarchicalentityapi.dto.HierarchyRequestDto;

@@ -1,12 +1,13 @@
 package tn.engn.hierarchicalentityapi.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import tn.engn.employeeapi.model.Employee;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 /**

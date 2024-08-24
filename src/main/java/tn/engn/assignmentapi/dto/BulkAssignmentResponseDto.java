@@ -1,6 +1,9 @@
 package tn.engn.assignmentapi.dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import tn.engn.hierarchicalentityapi.dto.HierarchyResponseDto;
 
 import java.util.List;

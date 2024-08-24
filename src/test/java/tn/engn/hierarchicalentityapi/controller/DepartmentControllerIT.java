@@ -25,7 +25,10 @@ import tn.engn.hierarchicalentityapi.exception.ErrorResponse;
 import tn.engn.hierarchicalentityapi.model.Department;
 import tn.engn.hierarchicalentityapi.repository.DepartmentRepository;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
